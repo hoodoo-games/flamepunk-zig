@@ -3,13 +3,17 @@ const rl = @import("raylib");
 const Vector2 = rl.Vector2;
 const Matrix = rl.Matrix;
 
-const TILE_SIZE: f32 = 32;
+const MAP_SIZE: f32 = 7;
+const SCALE: f32 = 2;
+
+const TILE_SIZE: f32 = 64;
 const HALF_TILE_SIZE: f32 = TILE_SIZE / 2;
 
-const MAP_SIZE: f32 = 7;
-var SCALE: f32 = 4;
-
 var hoveredTile: ?Vector2 = null;
+
+var minerals: f64 = 0;
+var gas: f64 = 0;
+var flame: f64 = 0;
 
 pub fn main() !void {
     const screenWidth = 1920;
@@ -20,7 +24,9 @@ pub fn main() !void {
 
     rl.setTargetFPS(60);
 
-    const cubeTexture = try rl.loadTexture("./assets/sprites/cube.png");
+    // const tileTexture = try rl.loadTexture("./assets/sprites/cube.png");
+    const tileTexture64 = try rl.loadTexture("./assets/sprites/tile_64.png");
+    const tileHighlightTexture = try rl.loadTexture("./assets/sprites/tile_highlight.png");
 
     while (!rl.windowShouldClose()) {
         hoveredTile = screenToIso(rl.getMousePosition());
@@ -29,7 +35,7 @@ pub fn main() !void {
         rl.beginDrawing();
         defer rl.endDrawing();
 
-        drawGrid(cubeTexture);
+        drawGrid(tileTexture64, tileHighlightTexture);
 
         // screen center marker
         // rl.drawCircle(@divFloor(rl.getScreenWidth(), 2), @divFloor(rl.getScreenHeight(), 2), 4, .white);
@@ -38,22 +44,28 @@ pub fn main() !void {
     }
 }
 
-fn drawGrid(tile_sprite: rl.Texture2D) void {
+fn drawGrid(tileSprite: rl.Texture2D, highlightSprite: rl.Texture2D) void {
     for (0..MAP_SIZE) |y| {
         for (0..MAP_SIZE) |x| {
             const pos = Vector2{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
             const screen_pos = isoToScreen(pos);
 
             const src: rl.Rectangle = .{ .x = 0, .y = 0, .width = TILE_SIZE, .height = TILE_SIZE };
-            var dest: rl.Rectangle = .{ .x = screen_pos.x, .y = screen_pos.y, .width = TILE_SIZE * SCALE, .height = TILE_SIZE * SCALE };
+
+            const dest: rl.Rectangle = .{
+                .x = screen_pos.x,
+                .y = screen_pos.y,
+                .width = TILE_SIZE * SCALE,
+                .height = TILE_SIZE * SCALE,
+            };
+
+            rl.drawTexturePro(tileSprite, src, dest, .{ .x = 0, .y = 0 }, 0, .white);
 
             if (hoveredTile) |t| {
                 if (t.x == @as(f32, @floatFromInt(x)) and t.y == @as(f32, @floatFromInt(y))) {
-                    dest.y -= SCALE * 2;
+                    rl.drawTexturePro(highlightSprite, src, dest, .{ .x = 0, .y = 0 }, 0, .white);
                 }
             }
-
-            rl.drawTexturePro(tile_sprite, src, dest, .{ .x = 0, .y = 0 }, 0, .white);
         }
     }
 }
