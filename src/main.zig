@@ -12,7 +12,7 @@ const HALF_TILE_SIZE: f32 = TILE_SIZE / 2;
 
 var hoveredTile: ?Vector2 = null;
 
-var tiles: [NUM_TILES]?Tile = .{null} ** NUM_TILES;
+var tiles: [NUM_TILES]Tile = .{Tile{}} ** NUM_TILES;
 
 const Tile = struct {
     building: ?PlacedBuilding = null,
@@ -25,9 +25,30 @@ const Building = struct {
 
 const PlacedBuilding = struct {};
 
-var minerals: f64 = 0;
-var gas: f64 = 0;
-var flame: f64 = 0;
+var resources = Resources{};
+
+const Resources = struct {
+    minerals: f64 = 0,
+    gas: f64 = 0,
+    flame: f64 = 0,
+};
+
+/// transactional resource update
+pub fn updateResources(delta: Resources) bool {
+    const minerals = resources.minerals + delta.minerals;
+    const gas = resources.gas + delta.gas;
+    const flame = resources.flame + delta.flame;
+
+    // rollback if any of the new totals are negative
+    if (minerals < 0 or gas < 0 or flame < 0) return false;
+
+    // commit new resource totals
+    resources.minerals = minerals;
+    resources.gas = gas;
+    resources.flame = flame;
+
+    return true;
+}
 
 pub fn main() !void {
     const screenWidth = 1920;
@@ -38,27 +59,40 @@ pub fn main() !void {
 
     rl.setTargetFPS(60);
 
-    // const tileTexture = try rl.loadTexture("./assets/sprites/cube.png");
-    const tileTexture64 = try rl.loadTexture("./assets/sprites/tile_64.png");
+    const tileTexture = try rl.loadTexture("./assets/sprites/tile.png");
     const tileHighlightTexture = try rl.loadTexture("./assets/sprites/tile_highlight.png");
     const buildingTexture = try rl.loadTexture("./assets/sprites/building.png");
 
-    tiles[0] = .{ .building = .{} };
-
     while (!rl.windowShouldClose()) {
-        hoveredTile = screenToIso(rl.getMousePosition());
-        // std.log.debug("{d}, {d}", .{ hoveredTile.x, hoveredTile.y });
+        updateAim();
+
+        if (hoveredTile) |coord| {
+            if (rl.isMouseButtonPressed(.left)) {
+                tiles[tileCoordToIdx(coord)].building = .{};
+            }
+        }
 
         rl.beginDrawing();
         defer rl.endDrawing();
 
-        drawGrid(tileTexture64, tileHighlightTexture, buildingTexture);
-
-        // screen center marker
-        // rl.drawCircle(@divFloor(rl.getScreenWidth(), 2), @divFloor(rl.getScreenHeight(), 2), 4, .white);
+        drawGrid(tileTexture, tileHighlightTexture, buildingTexture);
+        drawHUD();
 
         rl.clearBackground(.black);
     }
+}
+
+fn updateAim() void {
+    const coord = screenToIso(rl.getMousePosition());
+    hoveredTile = if (isTileInMap(coord)) coord else null;
+}
+
+fn isTileInMap(coord: Vector2) bool {
+    return coord.x >= 0 and coord.x < MAP_SIZE and coord.y >= 0 and coord.y < MAP_SIZE;
+}
+
+fn tileCoordToIdx(coord: Vector2) usize {
+    return @intFromFloat(coord.x + coord.y * MAP_SIZE);
 }
 
 fn drawGrid(tileSprite: rl.Texture2D, highlightSprite: rl.Texture2D, buildingSprite: rl.Texture2D) void {
@@ -85,22 +119,38 @@ fn drawGrid(tileSprite: rl.Texture2D, highlightSprite: rl.Texture2D, buildingSpr
             }
 
             const tileIdx = x + (y * @as(usize, @intFromFloat(MAP_SIZE)));
-            if (tiles[tileIdx]) |t| {
-                const s: rl.Rectangle = .{ .x = 0, .y = 0, .width = TILE_SIZE, .height = 40 };
+            const t = tiles[tileIdx];
+            const s: rl.Rectangle = .{ .x = 0, .y = 0, .width = TILE_SIZE, .height = 40 };
 
-                const d: rl.Rectangle = .{
-                    .x = screen_pos.x,
-                    .y = screen_pos.y,
-                    .width = TILE_SIZE * PX_SCALE,
-                    .height = 40 * PX_SCALE,
-                };
+            const d: rl.Rectangle = .{
+                .x = screen_pos.x,
+                .y = screen_pos.y,
+                .width = TILE_SIZE * PX_SCALE,
+                .height = 40 * PX_SCALE,
+            };
 
-                if (t.building != null) {
-                    rl.drawTexturePro(buildingSprite, s, d, .{ .x = 0, .y = 16 }, 0, .white);
-                }
+            if (t.building != null) {
+                rl.drawTexturePro(buildingSprite, s, d, .{ .x = 0, .y = 16 }, 0, .white);
             }
         }
     }
+}
+
+fn formatResourceString(qty: f64, buffer: []u8) [:0]u8 {
+    return std.fmt.bufPrintZ(buffer, "{d}", .{qty}) catch unreachable;
+}
+
+const RESOURCE_BUF_LEN = 16;
+
+fn drawHUD() void {
+    var mineralsBuf: [RESOURCE_BUF_LEN]u8 = .{0} ** RESOURCE_BUF_LEN;
+    const mineralsStr = formatResourceString(resources.minerals, &mineralsBuf);
+
+    var gasBuf: [RESOURCE_BUF_LEN]u8 = .{0} ** RESOURCE_BUF_LEN;
+    const gasStr = formatResourceString(resources.gas, &gasBuf);
+
+    rl.drawText(mineralsStr, 10, 10, 10 * PX_SCALE, .blue);
+    rl.drawText(gasStr, 10, 40, 10 * PX_SCALE, .green);
 }
 
 const I = Vector2{ .x = 1, .y = 0.5 };
