@@ -4,12 +4,26 @@ const Vector2 = rl.Vector2;
 const Matrix = rl.Matrix;
 
 const MAP_SIZE: f32 = 7;
-const SCALE: f32 = 2;
+const NUM_TILES: usize = @intFromFloat(MAP_SIZE * MAP_SIZE);
+const PX_SCALE: f32 = 2;
 
 const TILE_SIZE: f32 = 64;
 const HALF_TILE_SIZE: f32 = TILE_SIZE / 2;
 
 var hoveredTile: ?Vector2 = null;
+
+var tiles: [NUM_TILES]?Tile = .{null} ** NUM_TILES;
+
+const Tile = struct {
+    building: ?PlacedBuilding = null,
+};
+
+const Building = struct {
+    name: []u8 = "Building",
+    description: []u8 = "...",
+};
+
+const PlacedBuilding = struct {};
 
 var minerals: f64 = 0;
 var gas: f64 = 0;
@@ -27,6 +41,9 @@ pub fn main() !void {
     // const tileTexture = try rl.loadTexture("./assets/sprites/cube.png");
     const tileTexture64 = try rl.loadTexture("./assets/sprites/tile_64.png");
     const tileHighlightTexture = try rl.loadTexture("./assets/sprites/tile_highlight.png");
+    const buildingTexture = try rl.loadTexture("./assets/sprites/building.png");
+
+    tiles[0] = .{ .building = .{} };
 
     while (!rl.windowShouldClose()) {
         hoveredTile = screenToIso(rl.getMousePosition());
@@ -35,7 +52,7 @@ pub fn main() !void {
         rl.beginDrawing();
         defer rl.endDrawing();
 
-        drawGrid(tileTexture64, tileHighlightTexture);
+        drawGrid(tileTexture64, tileHighlightTexture, buildingTexture);
 
         // screen center marker
         // rl.drawCircle(@divFloor(rl.getScreenWidth(), 2), @divFloor(rl.getScreenHeight(), 2), 4, .white);
@@ -44,7 +61,7 @@ pub fn main() !void {
     }
 }
 
-fn drawGrid(tileSprite: rl.Texture2D, highlightSprite: rl.Texture2D) void {
+fn drawGrid(tileSprite: rl.Texture2D, highlightSprite: rl.Texture2D, buildingSprite: rl.Texture2D) void {
     for (0..MAP_SIZE) |y| {
         for (0..MAP_SIZE) |x| {
             const pos = Vector2{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
@@ -55,8 +72,8 @@ fn drawGrid(tileSprite: rl.Texture2D, highlightSprite: rl.Texture2D) void {
             const dest: rl.Rectangle = .{
                 .x = screen_pos.x,
                 .y = screen_pos.y,
-                .width = TILE_SIZE * SCALE,
-                .height = TILE_SIZE * SCALE,
+                .width = TILE_SIZE * PX_SCALE,
+                .height = TILE_SIZE * PX_SCALE,
             };
 
             rl.drawTexturePro(tileSprite, src, dest, .{ .x = 0, .y = 0 }, 0, .white);
@@ -64,6 +81,22 @@ fn drawGrid(tileSprite: rl.Texture2D, highlightSprite: rl.Texture2D) void {
             if (hoveredTile) |t| {
                 if (t.x == @as(f32, @floatFromInt(x)) and t.y == @as(f32, @floatFromInt(y))) {
                     rl.drawTexturePro(highlightSprite, src, dest, .{ .x = 0, .y = 0 }, 0, .white);
+                }
+            }
+
+            const tileIdx = x + (y * @as(usize, @intFromFloat(MAP_SIZE)));
+            if (tiles[tileIdx]) |t| {
+                const s: rl.Rectangle = .{ .x = 0, .y = 0, .width = TILE_SIZE, .height = 40 };
+
+                const d: rl.Rectangle = .{
+                    .x = screen_pos.x,
+                    .y = screen_pos.y,
+                    .width = TILE_SIZE * PX_SCALE,
+                    .height = 40 * PX_SCALE,
+                };
+
+                if (t.building != null) {
+                    rl.drawTexturePro(buildingSprite, s, d, .{ .x = 0, .y = 16 }, 0, .white);
                 }
             }
         }
@@ -81,7 +114,7 @@ fn screenToIso(screen: Vector2) Vector2 {
 
     iso = iso.scale(IJ_DET);
     iso = I_INV.scale(iso.x).add(J_INV.scale(iso.y));
-    iso = iso.scale(1 / SCALE / HALF_TILE_SIZE);
+    iso = iso.scale(1 / PX_SCALE / HALF_TILE_SIZE);
 
     iso.x = @floor(iso.x + MAP_SIZE / 2);
     iso.y = @floor(iso.y + MAP_SIZE / 2);
@@ -96,7 +129,7 @@ fn isoToScreen(iso: Vector2) Vector2 {
     screen.x -= 1;
     screen.y -= MAP_SIZE / 2;
 
-    screen = screen.scale(SCALE * HALF_TILE_SIZE).add(halfScreenSize());
+    screen = screen.scale(PX_SCALE * HALF_TILE_SIZE).add(halfScreenSize());
 
     return screen;
 }
@@ -116,3 +149,7 @@ fn degrees(rad: f32) f32 {
 fn radians(deg: f32) f32 {
     return deg * std.math.pi / 180;
 }
+
+fn changeMinerals() void {}
+fn changeGas() void {}
+fn changeFlame() void {}
