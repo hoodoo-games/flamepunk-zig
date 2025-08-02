@@ -20,31 +20,38 @@ var tiles: [NUM_TILES]Tile = .{Tile{}} ** NUM_TILES;
 
 var resources = Resources{};
 
-var effects: [enumLen(Effect.Stage)](ArrayList(Effect)) = undefined;
+var effects: [enumLen(EffectStage)](ArrayList(Effect)) = undefined;
 
-const Effect = struct {
-    callback: *const fn (*Message) void,
+const Effect = *const fn (*Message) void;
 
-    const Stage = enum {
-        before,
-        add,
-        multiply,
-        after,
-        display,
-    };
+const EffectStage = enum {
+    before,
+    add,
+    multiply,
+    after,
+    display,
 };
 
 const Message = union(enum(usize)) {
-    update: void,
     roundStart: void,
     roundEnd: void,
-    buildingPlaced: struct { building: PlacedBuilding },
-    buildingDemolished: struct { building: PlacedBuilding },
-    buildingProduced: struct { building: PlacedBuilding },
+    buildingPlaced: struct { building: *PlacedBuilding },
+    buildingDemolished: struct { building: *PlacedBuilding },
+    buildingProduced: struct {
+        building: *PlacedBuilding,
+        yield: Resources,
+    },
     buildingUnlocked: struct { type: BuildingType },
     augmentSelected: struct {},
 
-    fn apply(_: *const Message) void {}
+    fn apply(self: *const Message) void {
+        switch (self.*) {
+            .buildingProduced => |m| {
+                _ = updateResources(m.yield);
+            },
+            else => {},
+        }
+    }
 };
 
 pub fn handleMessage(message: Message) void {
@@ -52,12 +59,14 @@ pub fn handleMessage(message: Message) void {
 
     for (&effects) |*stage| {
         for (stage.items) |e| {
-            e.callback(&m);
+            e(&m);
         }
     }
+
+    m.apply();
 }
 
-pub fn addEffect(stage: Effect.Stage, effect: Effect) void {
+pub fn addEffect(stage: EffectStage, effect: Effect) void {
     effects[@intFromEnum(stage)].append(effect) catch unreachable;
 }
 
@@ -116,7 +125,11 @@ const PlacedBuilding = struct {
     }
 
     pub fn produce(self: *PlacedBuilding) void {
-        _ = updateResources(self.yield());
+        handleMessage(.{ .buildingProduced = .{
+            .building = self,
+            .yield = self.yield(),
+        } });
+
         self.elapsedProductionTime = 0;
     }
 };
@@ -170,11 +183,23 @@ pub fn main() !void {
     const tileHighlightTexture = try rl.loadTexture("./assets/sprites/tile_highlight.png");
     const buildingTexture = try rl.loadTexture("./assets/sprites/building.png");
 
-    addEffect(.before, .{ .callback = struct {
-        fn callback(_: *Message) void {
-            std.log.debug("EFFECT RAN", .{});
-        }
-    }.callback });
+    // addEffect(
+    //     .before,
+    //     struct {
+    //         fn callback(m: *Message) void {
+    //             switch (m.*) {
+    //                 .buildingProduced => |*e| {
+    //                     std.log.debug("PRODUCED (M: {d}, G: {d}, F: {d})", .{
+    //                         e.yield.minerals,
+    //                         e.yield.gas,
+    //                         e.yield.flame,
+    //                     });
+    //                 },
+    //                 else => {},
+    //             }
+    //         }
+    //     }.callback,
+    // );
 
     handleMessage(Message{ .roundStart = {} });
 
