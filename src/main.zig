@@ -1,7 +1,12 @@
 const std = @import("std");
 const rl = @import("raylib");
+
+const ArrayList = std.ArrayList;
 const Vector2 = rl.Vector2;
 const Matrix = rl.Matrix;
+
+const Allocator = std.mem.Allocator;
+var alloc = std.heap.DebugAllocator(.{}){};
 
 const MAP_SIZE: f32 = 7;
 const NUM_TILES: usize = @intFromFloat(MAP_SIZE * MAP_SIZE);
@@ -11,26 +16,123 @@ const TILE_SIZE: f32 = 64;
 const HALF_TILE_SIZE: f32 = TILE_SIZE / 2;
 
 var hoveredTile: ?Vector2 = null;
-
 var tiles: [NUM_TILES]Tile = .{Tile{}} ** NUM_TILES;
+
+var resources = Resources{};
+
+var effects: [enumLen(Effect.Stage)](ArrayList(Effect)) = undefined;
+
+const Effect = struct {
+    callback: *const fn (*Message) void,
+
+    const Stage = enum {
+        before,
+        add,
+        multiply,
+        after,
+        display,
+    };
+};
+
+const Message = union(enum(usize)) {
+    update: void,
+    roundStart: void,
+    roundEnd: void,
+    buildingPlaced: struct { building: PlacedBuilding },
+    buildingDemolished: struct { building: PlacedBuilding },
+    buildingProduced: struct { building: PlacedBuilding },
+    buildingUnlocked: struct { type: BuildingType },
+    augmentSelected: struct {},
+
+    fn apply(_: *const Message) void {}
+};
+
+pub fn handleMessage(message: Message) void {
+    var m = message;
+
+    for (&effects) |*stage| {
+        for (stage.items) |e| {
+            e.callback(&m);
+        }
+    }
+}
+
+pub fn addEffect(stage: Effect.Stage, effect: Effect) void {
+    effects[@intFromEnum(stage)].append(effect) catch unreachable;
+}
 
 const Tile = struct {
     building: ?PlacedBuilding = null,
 };
 
-const Building = struct {
-    name: []u8 = "Building",
-    description: []u8 = "...",
+const BuildingType = enum { mine, extractor, obelisk };
+
+const buildings: [enumLen(BuildingType)]Building = .{
+    .{
+        .name = "Mine",
+        .description = "Basic mineral and gas production",
+        .productionDuration = 1,
+        .yield = .{ .minerals = 5, .gas = 2 },
+    },
+    .{
+        .name = "Extractor",
+        .description = "Advanced gas production",
+        .productionDuration = 2,
+        .yield = .{ .gas = 25 },
+    },
+    .{
+        .name = "Obelisk",
+        .description = "PONDER THE OBELISK",
+        .productionDuration = 5,
+        .yield = .{ .flame = 1000 },
+        .locked = true,
+    },
 };
 
-const PlacedBuilding = struct {};
+const Building = struct {
+    name: []const u8,
+    description: []const u8,
+    productionDuration: f32,
+    yield: Resources,
+    locked: bool = false,
+};
 
-var resources = Resources{};
+const PlacedBuilding = struct {
+    type: BuildingType,
+    elapsedProductionTime: f32 = 0,
+    productionDurationModifier: f32 = 0,
+    yieldModifier: Resources = .{},
+
+    pub fn archetype(self: *const PlacedBuilding) Building {
+        return buildings[@intFromEnum(self.type)];
+    }
+
+    pub fn productionDuration(self: *const PlacedBuilding) f32 {
+        return self.archetype().productionDuration + self.productionDurationModifier;
+    }
+
+    pub fn yield(self: *const PlacedBuilding) Resources {
+        return self.archetype().yield.add(self.yieldModifier);
+    }
+
+    pub fn produce(self: *PlacedBuilding) void {
+        _ = updateResources(self.yield());
+        self.elapsedProductionTime = 0;
+    }
+};
 
 const Resources = struct {
     minerals: f64 = 0,
     gas: f64 = 0,
     flame: f64 = 0,
+
+    pub fn add(self: Resources, other: Resources) Resources {
+        return .{
+            .minerals = self.minerals + other.minerals,
+            .gas = self.gas + other.gas,
+            .flame = self.flame + other.flame,
+        };
+    }
 };
 
 /// transactional resource update
@@ -59,16 +161,31 @@ pub fn main() !void {
 
     rl.setTargetFPS(60);
 
+    // init effect lists
+    for (0..effects.len) |i| {
+        effects[i] = ArrayList(Effect).init(alloc.allocator());
+    }
+
     const tileTexture = try rl.loadTexture("./assets/sprites/tile.png");
     const tileHighlightTexture = try rl.loadTexture("./assets/sprites/tile_highlight.png");
     const buildingTexture = try rl.loadTexture("./assets/sprites/building.png");
 
+    addEffect(.before, .{ .callback = struct {
+        fn callback(_: *Message) void {
+            std.log.debug("EFFECT RAN", .{});
+        }
+    }.callback });
+
+    handleMessage(Message{ .roundStart = {} });
+
     while (!rl.windowShouldClose()) {
         updateAim();
 
+        updateBuildings();
+
         if (hoveredTile) |coord| {
             if (rl.isMouseButtonPressed(.left)) {
-                tiles[tileCoordToIdx(coord)].building = .{};
+                tiles[tileCoordToIdx(coord)].building = .{ .type = .mine };
             }
         }
 
@@ -80,11 +197,29 @@ pub fn main() !void {
 
         rl.clearBackground(.black);
     }
+
+    // deinit effect lists
+    for (&effects) |*stage| {
+        stage.deinit();
+    }
 }
 
 fn updateAim() void {
     const coord = screenToIso(rl.getMousePosition());
     hoveredTile = if (isTileInMap(coord)) coord else null;
+}
+
+fn updateBuildings() void {
+    for (&tiles) |*t| {
+        if (t.building) |*b| {
+            const archetype = buildings[@intFromEnum(b.type)];
+
+            b.elapsedProductionTime += rl.getFrameTime();
+            if (b.elapsedProductionTime >= archetype.productionDuration) {
+                b.produce();
+            }
+        }
+    }
 }
 
 fn isTileInMap(coord: Vector2) bool {
@@ -200,6 +335,6 @@ fn radians(deg: f32) f32 {
     return deg * std.math.pi / 180;
 }
 
-fn changeMinerals() void {}
-fn changeGas() void {}
-fn changeFlame() void {}
+fn enumLen(t: type) usize {
+    return @typeInfo(t).@"enum".fields.len;
+}
