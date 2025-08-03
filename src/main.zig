@@ -93,7 +93,7 @@ const buildings: [enumLen(BuildingType)]Building = .{
         .name = "Obelisk",
         .description = "PONDER THE OBELISK",
         .productionDuration = 5,
-        .yield = .{ .flame = 1000 },
+        .yield = .{ .gold = 1000 },
         .locked = true,
     },
 };
@@ -137,13 +137,13 @@ const PlacedBuilding = struct {
 const Resources = struct {
     minerals: f64 = 0,
     gas: f64 = 0,
-    flame: f64 = 0,
+    gold: f64 = 0,
 
     pub fn add(self: Resources, other: Resources) Resources {
         return .{
             .minerals = self.minerals + other.minerals,
             .gas = self.gas + other.gas,
-            .flame = self.flame + other.flame,
+            .gold = self.gold + other.gold,
         };
     }
 };
@@ -152,15 +152,15 @@ const Resources = struct {
 pub fn updateResources(delta: Resources) bool {
     const minerals = resources.minerals + delta.minerals;
     const gas = resources.gas + delta.gas;
-    const flame = resources.flame + delta.flame;
+    const gold = resources.gold + delta.gold;
 
     // rollback if any of the new totals are negative
-    if (minerals < 0 or gas < 0 or flame < 0) return false;
+    if (minerals < 0 or gas < 0 or gold < 0) return false;
 
     // commit new resource totals
     resources.minerals = minerals;
     resources.gas = gas;
-    resources.flame = flame;
+    resources.gold = gold;
 
     return true;
 }
