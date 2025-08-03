@@ -183,24 +183,6 @@ pub fn main() !void {
     const tileHighlightTexture = try rl.loadTexture("./assets/sprites/tile_highlight.png");
     const buildingTexture = try rl.loadTexture("./assets/sprites/building.png");
 
-    // addEffect(
-    //     .before,
-    //     struct {
-    //         fn callback(m: *Message) void {
-    //             switch (m.*) {
-    //                 .buildingProduced => |*e| {
-    //                     std.log.debug("PRODUCED (M: {d}, G: {d}, F: {d})", .{
-    //                         e.yield.minerals,
-    //                         e.yield.gas,
-    //                         e.yield.flame,
-    //                     });
-    //                 },
-    //                 else => {},
-    //             }
-    //         }
-    //     }.callback,
-    // );
-
     handleMessage(Message{ .roundStart = {} });
 
     while (!rl.windowShouldClose()) {
