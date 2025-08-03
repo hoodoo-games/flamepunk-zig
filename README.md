@@ -2,7 +2,7 @@
 
 ...
 
-This repo is published under the Polyform Noncommercial license ([read more](./LICENSE.md))
+This repo is published under the [**PolyForm Noncommercial**](./LICENSE.md) license.
 
 ## Dev Environment
 

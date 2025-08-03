@@ -1,5 +1,6 @@
 const std = @import("std");
 const rl = @import("raylib");
+const gui = @import("gui.zig");
 
 const ArrayList = std.ArrayList;
 const Vector2 = rl.Vector2;
@@ -10,7 +11,7 @@ var alloc = std.heap.DebugAllocator(.{}){};
 
 const MAP_SIZE: f32 = 7;
 const NUM_TILES: usize = @intFromFloat(MAP_SIZE * MAP_SIZE);
-const PX_SCALE: f32 = 2;
+pub const PX_SCALE: f32 = 3;
 
 const TILE_SIZE: f32 = 64;
 const HALF_TILE_SIZE: f32 = TILE_SIZE / 2;
@@ -18,7 +19,7 @@ const HALF_TILE_SIZE: f32 = TILE_SIZE / 2;
 var hoveredTile: ?Vector2 = null;
 var tiles: [NUM_TILES]Tile = .{Tile{}} ** NUM_TILES;
 
-var resources = Resources{};
+pub var resources = Resources{};
 
 var effects: [enumLen(EffectStage)](ArrayList(Effect)) = undefined;
 
@@ -29,6 +30,14 @@ var roundIdx: usize = 0;
 var elapsedRoundTime: f32 = 0;
 
 var victory: ?bool = null;
+
+pub var placementMode: PlacementMode = .none;
+
+const PlacementMode = union(enum(u8)) {
+    none,
+    place: struct { archetypeIdx: usize },
+    demolish,
+};
 
 pub fn remainingRoundTime() f32 {
     return ascension().roundDuration - elapsedRoundTime;
@@ -63,7 +72,7 @@ const ascensions = [_]Ascension{
             .minerals = 50,
         },
         .numRounds = 6,
-        .roundDuration = 10,
+        .roundDuration = 30,
     },
 };
 
@@ -119,18 +128,56 @@ const Tile = struct {
     building: ?PlacedBuilding = null,
 };
 
-const buildings = [_]Building{
+const buildings = [9]Building{
     .{
         .name = "Mine",
         .description = "Basic mineral and gas production",
         .productionDuration = 1,
-        .yield = .{ .minerals = 5, .gas = 2 },
+        .yield = .{ .minerals = 5, .gas = 2, .gold = 1 },
     },
     .{
         .name = "Extractor",
         .description = "Advanced gas production",
         .productionDuration = 2,
         .yield = .{ .gas = 25 },
+    },
+    .{
+        .name = "...",
+        .description = "...",
+        .productionDuration = 1,
+        .yield = .{},
+    },
+    .{
+        .name = "...",
+        .description = "...",
+        .productionDuration = 1,
+        .yield = .{},
+    },
+    .{
+        .name = "...",
+        .description = "...",
+        .productionDuration = 1,
+        .yield = .{},
+    },
+    .{
+        .name = "...",
+        .description = "...",
+        .productionDuration = 1,
+        .yield = .{},
+    },
+    .{
+        .name = "...",
+        .description = "...",
+        .productionDuration = 1,
+        .yield = .{},
+        .locked = true,
+    },
+    .{
+        .name = "...",
+        .description = "...",
+        .productionDuration = 1,
+        .yield = .{},
+        .locked = true,
     },
     .{
         .name = "Obelisk",
@@ -217,6 +264,9 @@ pub fn main() !void {
 
     rl.setTargetFPS(60);
 
+    gui.init(alloc.allocator());
+    defer gui.deinit();
+
     // init effect lists
     for (0..effects.len) |i| {
         effects[i] = ArrayList(Effect).init(alloc.allocator());
@@ -233,6 +283,7 @@ pub fn main() !void {
     roundActive = true;
 
     while (!rl.windowShouldClose()) {
+        gui.draw();
         updateAim();
 
         if (roundActive) {
@@ -257,9 +308,20 @@ pub fn main() !void {
 
             // place building
             if (hoveredTile) |coord| {
-                if (rl.isMouseButtonPressed(.left)) {
-                    tiles[tileCoordToIdx(coord)].building = .{ .archetypeIdx = 0 };
+                const lmbPressed = rl.isMouseButtonPressed(.left);
+                const rmbPressed = rl.isMouseButtonPressed(.right);
+
+                switch (placementMode) {
+                    .place => |m| {
+                        if (lmbPressed) placeBuilding(coord, m.archetypeIdx);
+                    },
+                    .demolish => {
+                        if (lmbPressed) demolishBuilding(coord);
+                    },
+                    else => {},
                 }
+
+                if (rmbPressed) placementMode = .none;
             }
         }
 
@@ -276,6 +338,38 @@ pub fn main() !void {
     for (&effects) |*stage| {
         stage.deinit();
     }
+}
+
+fn placeBuilding(coord: Vector2, archetypeIdx: usize) void {
+    // destroy obstructing building if exists
+    if (tiles[tileCoordToIdx(coord)].building != null) demolishBuilding(coord);
+
+    tiles[tileCoordToIdx(coord)].building = .{ .archetypeIdx = archetypeIdx };
+}
+
+fn demolishBuilding(coord: Vector2) void {
+    //TODO deferred destruction
+    tiles[tileCoordToIdx(coord)].building = null;
+}
+
+pub fn selectBuilding(archetypeIdx: usize) void {
+    if (archetypeIdx >= buildings.len or buildings[archetypeIdx].locked) {
+        placementMode = .none;
+        return;
+    }
+
+    placementMode = .{ .place = .{ .archetypeIdx = archetypeIdx } };
+}
+
+pub fn selectedBuilding() ?usize {
+    return switch (placementMode) {
+        .place => |m| m.archetypeIdx,
+        else => null,
+    };
+}
+
+pub fn building(archetypeIdx: usize) *const Building {
+    return &buildings[archetypeIdx];
 }
 
 fn updateAim() void {
@@ -344,7 +438,7 @@ fn drawGrid(tileSprite: rl.Texture2D, highlightSprite: rl.Texture2D, buildingSpr
             };
 
             if (t.building != null) {
-                rl.drawTexturePro(buildingSprite, s, d, .{ .x = 0, .y = 16 }, 0, .white);
+                rl.drawTexturePro(buildingSprite, s, d, .{ .x = 0, .y = 8 * PX_SCALE }, 0, .white);
             }
         }
     }
@@ -408,7 +502,7 @@ fn isoToScreen(iso: Vector2) Vector2 {
     return screen;
 }
 
-fn screenSize() Vector2 {
+pub fn screenSize() Vector2 {
     return .{ .x = @floatFromInt(rl.getScreenWidth()), .y = @floatFromInt(rl.getScreenHeight()) };
 }
 
