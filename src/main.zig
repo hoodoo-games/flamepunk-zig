@@ -22,6 +22,51 @@ var resources = Resources{};
 
 var effects: [enumLen(EffectStage)](ArrayList(Effect)) = undefined;
 
+var ascensionIndex: usize = 0;
+
+var roundActive: bool = false;
+var roundIdx: usize = 0;
+var elapsedRoundTime: f32 = 0;
+
+var victory: ?bool = null;
+
+pub fn remainingRoundTime() f32 {
+    return ascension().roundDuration - elapsedRoundTime;
+}
+
+pub fn ascension() Ascension {
+    return ascensions[ascensionIndex];
+}
+
+pub fn goldQuota() f64 {
+    return ascension().goldQuota(roundIdx);
+}
+
+const Ascension = struct {
+    name: []const u8,
+    description: []const u8,
+    startingResources: Resources,
+    numRounds: usize,
+    roundDuration: f32,
+
+    fn goldQuota(_: *const Ascension, round: usize) f32 {
+        //TODO gold quota scaling function
+        return @floatFromInt((round + 1) * 100);
+    }
+};
+
+const ascensions = [_]Ascension{
+    .{
+        .name = "Demigod",
+        .description = "...",
+        .startingResources = .{
+            .minerals = 50,
+        },
+        .numRounds = 6,
+        .roundDuration = 10,
+    },
+};
+
 const Effect = *const fn (*Message) void;
 
 const EffectStage = enum {
@@ -41,7 +86,7 @@ const Message = union(enum(usize)) {
         building: *PlacedBuilding,
         yield: Resources,
     },
-    buildingUnlocked: struct { type: BuildingType },
+    buildingUnlocked: struct { archetypeIdx: usize },
     augmentSelected: struct {},
 
     fn apply(self: *const Message) void {
@@ -74,9 +119,7 @@ const Tile = struct {
     building: ?PlacedBuilding = null,
 };
 
-const BuildingType = enum { mine, extractor, obelisk };
-
-const buildings: [enumLen(BuildingType)]Building = .{
+const buildings = [_]Building{
     .{
         .name = "Mine",
         .description = "Basic mineral and gas production",
@@ -107,13 +150,13 @@ const Building = struct {
 };
 
 const PlacedBuilding = struct {
-    type: BuildingType,
+    archetypeIdx: usize,
     elapsedProductionTime: f32 = 0,
     productionDurationModifier: f32 = 0,
     yieldModifier: Resources = .{},
 
     pub fn archetype(self: *const PlacedBuilding) Building {
-        return buildings[@intFromEnum(self.type)];
+        return buildings[self.archetypeIdx];
     }
 
     pub fn productionDuration(self: *const PlacedBuilding) f32 {
@@ -185,14 +228,38 @@ pub fn main() !void {
 
     handleMessage(Message{ .roundStart = {} });
 
+    std.log.debug("{d}", .{ascensions[ascensionIndex].roundDuration});
+
+    roundActive = true;
+
     while (!rl.windowShouldClose()) {
         updateAim();
 
-        updateBuildings();
+        if (roundActive) {
+            updateBuildings();
 
-        if (hoveredTile) |coord| {
-            if (rl.isMouseButtonPressed(.left)) {
-                tiles[tileCoordToIdx(coord)].building = .{ .type = .mine };
+            elapsedRoundTime += rl.getFrameTime();
+            if (elapsedRoundTime >= ascension().roundDuration) {
+                if (resources.gold >= goldQuota()) {
+                    roundIdx += 1;
+
+                    if (roundIdx >= ascension().numRounds) {
+                        endGame(true);
+                    } else {
+                        // start next round
+                        elapsedRoundTime = 0;
+                        resources.gold = 0;
+                    }
+                } else {
+                    endGame(false);
+                }
+            }
+
+            // place building
+            if (hoveredTile) |coord| {
+                if (rl.isMouseButtonPressed(.left)) {
+                    tiles[tileCoordToIdx(coord)].building = .{ .archetypeIdx = 0 };
+                }
             }
         }
 
@@ -216,10 +283,15 @@ fn updateAim() void {
     hoveredTile = if (isTileInMap(coord)) coord else null;
 }
 
+fn endGame(win: bool) void {
+    roundActive = false;
+    victory = win;
+}
+
 fn updateBuildings() void {
     for (&tiles) |*t| {
         if (t.building) |*b| {
-            const archetype = buildings[@intFromEnum(b.type)];
+            const archetype = buildings[b.archetypeIdx];
 
             b.elapsedProductionTime += rl.getFrameTime();
             if (b.elapsedProductionTime >= archetype.productionDuration) {
@@ -279,7 +351,7 @@ fn drawGrid(tileSprite: rl.Texture2D, highlightSprite: rl.Texture2D, buildingSpr
 }
 
 fn formatResourceString(qty: f64, buffer: []u8) [:0]u8 {
-    return std.fmt.bufPrintZ(buffer, "{d}", .{qty}) catch unreachable;
+    return std.fmt.bufPrintZ(buffer, "{d:.0}", .{qty}) catch unreachable;
 }
 
 const RESOURCE_BUF_LEN = 16;
@@ -291,8 +363,18 @@ fn drawHUD() void {
     var gasBuf: [RESOURCE_BUF_LEN]u8 = .{0} ** RESOURCE_BUF_LEN;
     const gasStr = formatResourceString(resources.gas, &gasBuf);
 
+    var roundTimeBuf: [RESOURCE_BUF_LEN]u8 = .{0} ** RESOURCE_BUF_LEN;
+    const roundTimeStr = formatResourceString(remainingRoundTime(), &roundTimeBuf);
+
+    const xCenter = @divFloor(rl.getScreenWidth(), 2);
+
     rl.drawText(mineralsStr, 10, 10, 10 * PX_SCALE, .blue);
     rl.drawText(gasStr, 10, 40, 10 * PX_SCALE, .green);
+    rl.drawText(roundTimeStr, xCenter, 10, 10 * PX_SCALE, .white);
+
+    if (victory) |v| {
+        rl.drawText(if (v) "VICTORY" else "DEFEAT", xCenter - 85, @divFloor(rl.getScreenHeight(), 5), 20 * PX_SCALE, .white);
+    }
 }
 
 const I = Vector2{ .x = 1, .y = 0.5 };
