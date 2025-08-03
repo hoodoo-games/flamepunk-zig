@@ -1,10 +1,23 @@
 const std = @import("std");
 const rl = @import("raylib");
 const gui = @import("gui.zig");
+const asc = @import("ascensions.zig");
+const bld = @import("buildings.zig");
+const aug = @import("augments.zig");
 
 const ArrayList = std.ArrayList;
 const Vector2 = rl.Vector2;
 const Matrix = rl.Matrix;
+
+const Building = bld.Building;
+const PlacedBuilding = bld.PlacedBuilding;
+const buildings = bld.buildings;
+
+const Ascension = asc.Ascension;
+const ascensions = asc.ascensions;
+
+const Augment = aug.Augment;
+const augments = aug.augments;
 
 const Allocator = std.mem.Allocator;
 var alloc = std.heap.DebugAllocator(.{}){};
@@ -21,13 +34,14 @@ var tiles: [NUM_TILES]Tile = .{Tile{}} ** NUM_TILES;
 
 pub var resources = Resources{};
 
-var effects: [enumLen(EffectStage)](ArrayList(Effect)) = undefined;
-
 var ascensionIndex: usize = 0;
 
 var roundActive: bool = false;
 var roundIdx: usize = 0;
 var elapsedRoundTime: f32 = 0;
+
+var activeAugments: ArrayList(Augment) = undefined;
+var activeBuildings: [9]Building = undefined;
 
 var victory: ?bool = null;
 
@@ -51,42 +65,7 @@ pub fn goldQuota() f64 {
     return ascension().goldQuota(roundIdx);
 }
 
-const Ascension = struct {
-    name: []const u8,
-    description: []const u8,
-    startingResources: Resources,
-    numRounds: usize,
-    roundDuration: f32,
-
-    fn goldQuota(_: *const Ascension, round: usize) f32 {
-        //TODO gold quota scaling function
-        return @floatFromInt((round + 1) * 100);
-    }
-};
-
-const ascensions = [_]Ascension{
-    .{
-        .name = "Demigod",
-        .description = "...",
-        .startingResources = .{
-            .minerals = 50,
-        },
-        .numRounds = 6,
-        .roundDuration = 30,
-    },
-};
-
-const Effect = *const fn (*Message) void;
-
-const EffectStage = enum {
-    before,
-    add,
-    multiply,
-    after,
-    display,
-};
-
-const Message = union(enum(usize)) {
+pub const Message = union(enum(usize)) {
     roundStart: void,
     roundEnd: void,
     buildingPlaced: struct { building: *PlacedBuilding },
@@ -111,120 +90,19 @@ const Message = union(enum(usize)) {
 pub fn handleMessage(message: Message) void {
     var m = message;
 
-    for (&effects) |*stage| {
-        for (stage.items) |e| {
-            e(&m);
-        }
-    }
+    for (activeAugments.items) |*a| if (a.callbacks.before) |e| e(a, &m);
+    for (activeAugments.items) |*a| if (a.callbacks.add) |e| e(a, &m);
+    for (activeAugments.items) |*a| if (a.callbacks.multiply) |e| e(a, &m);
+    for (activeAugments.items) |*a| if (a.callbacks.after) |e| e(a, &m);
 
     m.apply();
-}
-
-pub fn addEffect(stage: EffectStage, effect: Effect) void {
-    effects[@intFromEnum(stage)].append(effect) catch unreachable;
 }
 
 const Tile = struct {
     building: ?PlacedBuilding = null,
 };
 
-const buildings = [9]Building{
-    .{
-        .name = "Mine",
-        .description = "Basic mineral and gas production",
-        .productionDuration = 1,
-        .yield = .{ .minerals = 5, .gas = 2, .gold = 1 },
-    },
-    .{
-        .name = "Extractor",
-        .description = "Advanced gas production",
-        .productionDuration = 2,
-        .yield = .{ .gas = 25 },
-    },
-    .{
-        .name = "...",
-        .description = "...",
-        .productionDuration = 1,
-        .yield = .{},
-    },
-    .{
-        .name = "...",
-        .description = "...",
-        .productionDuration = 1,
-        .yield = .{},
-    },
-    .{
-        .name = "...",
-        .description = "...",
-        .productionDuration = 1,
-        .yield = .{},
-    },
-    .{
-        .name = "...",
-        .description = "...",
-        .productionDuration = 1,
-        .yield = .{},
-    },
-    .{
-        .name = "...",
-        .description = "...",
-        .productionDuration = 1,
-        .yield = .{},
-        .locked = true,
-    },
-    .{
-        .name = "...",
-        .description = "...",
-        .productionDuration = 1,
-        .yield = .{},
-        .locked = true,
-    },
-    .{
-        .name = "Obelisk",
-        .description = "PONDER THE OBELISK",
-        .productionDuration = 5,
-        .yield = .{ .gold = 1000 },
-        .locked = true,
-    },
-};
-
-const Building = struct {
-    name: []const u8,
-    description: []const u8,
-    productionDuration: f32,
-    yield: Resources,
-    locked: bool = false,
-};
-
-const PlacedBuilding = struct {
-    archetypeIdx: usize,
-    elapsedProductionTime: f32 = 0,
-    productionDurationModifier: f32 = 0,
-    yieldModifier: Resources = .{},
-
-    pub fn archetype(self: *const PlacedBuilding) Building {
-        return buildings[self.archetypeIdx];
-    }
-
-    pub fn productionDuration(self: *const PlacedBuilding) f32 {
-        return self.archetype().productionDuration + self.productionDurationModifier;
-    }
-
-    pub fn yield(self: *const PlacedBuilding) Resources {
-        return self.archetype().yield.add(self.yieldModifier);
-    }
-
-    pub fn produce(self: *PlacedBuilding) void {
-        handleMessage(.{ .buildingProduced = .{
-            .building = self,
-            .yield = self.yield(),
-        } });
-
-        self.elapsedProductionTime = 0;
-    }
-};
-
-const Resources = struct {
+pub const Resources = struct {
     minerals: f64 = 0,
     gas: f64 = 0,
     gold: f64 = 0,
@@ -255,6 +133,12 @@ pub fn updateResources(delta: Resources) bool {
     return true;
 }
 
+pub fn addAugment(augmentIdx: usize) void {
+    var augment = aug.augments[augmentIdx];
+    if (augment.callbacks.init) |e| e(&augment);
+    activeAugments.append(augment) catch unreachable;
+}
+
 pub fn main() !void {
     const screenWidth = 1920;
     const screenHeight = 1080;
@@ -264,21 +148,19 @@ pub fn main() !void {
 
     rl.setTargetFPS(60);
 
+    activeAugments = ArrayList(Augment).init(alloc.allocator());
+    defer activeAugments.deinit();
+
+    activeBuildings = buildings;
+
     gui.init(alloc.allocator());
     defer gui.deinit();
-
-    // init effect lists
-    for (0..effects.len) |i| {
-        effects[i] = ArrayList(Effect).init(alloc.allocator());
-    }
 
     const tileTexture = try rl.loadTexture("./assets/sprites/tile.png");
     const tileHighlightTexture = try rl.loadTexture("./assets/sprites/tile_highlight.png");
     const buildingTexture = try rl.loadTexture("./assets/sprites/building.png");
 
     handleMessage(Message{ .roundStart = {} });
-
-    std.log.debug("{d}", .{ascensions[ascensionIndex].roundDuration});
 
     roundActive = true;
 
@@ -333,11 +215,6 @@ pub fn main() !void {
 
         rl.clearBackground(.black);
     }
-
-    // deinit effect lists
-    for (&effects) |*stage| {
-        stage.deinit();
-    }
 }
 
 fn placeBuilding(coord: Vector2, archetypeIdx: usize) void {
@@ -353,7 +230,7 @@ fn demolishBuilding(coord: Vector2) void {
 }
 
 pub fn selectBuilding(archetypeIdx: usize) void {
-    if (archetypeIdx >= buildings.len or buildings[archetypeIdx].locked) {
+    if (archetypeIdx >= activeBuildings.len or activeBuildings[archetypeIdx].locked) {
         placementMode = .none;
         return;
     }
@@ -368,8 +245,12 @@ pub fn selectedBuilding() ?usize {
     };
 }
 
+pub fn unlockBuilding(archetypeIdx: usize) void {
+    activeBuildings[archetypeIdx].locked = false;
+}
+
 pub fn building(archetypeIdx: usize) *const Building {
-    return &buildings[archetypeIdx];
+    return &activeBuildings[archetypeIdx];
 }
 
 fn updateAim() void {
@@ -385,7 +266,7 @@ fn endGame(win: bool) void {
 fn updateBuildings() void {
     for (&tiles) |*t| {
         if (t.building) |*b| {
-            const archetype = buildings[b.archetypeIdx];
+            const archetype = activeBuildings[b.archetypeIdx];
 
             b.elapsedProductionTime += rl.getFrameTime();
             if (b.elapsedProductionTime >= archetype.productionDuration) {
