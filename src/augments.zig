@@ -23,10 +23,10 @@ pub const augments = [_]Augment{
     },
 };
 
-fn chainReaction(self: *Augment, m: *Message) void {
+fn chainReaction(_: *Augment, m: *Message) void {
     switch (m.*) {
         .buildingProduced => {
-            std.log.debug("AUGMENT {s}", .{self.name});
+            // std.log.debug("AUGMENT {s}", .{self.name});
         },
         else => {},
     }
@@ -44,8 +44,8 @@ fn unlockBuilding(self: *Augment) void {
 pub const MessageHandler = *const fn (*Augment, *Message) void;
 
 pub const Augment = struct {
-    name: []const u8,
-    description: []const u8,
+    name: [:0]const u8,
+    description: [:0]const u8,
     properties: Properties = .none,
     callbacks: struct {
         init: ?*const fn (*Augment) void = null,

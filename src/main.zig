@@ -36,6 +36,7 @@ pub var resources = Resources{};
 
 var ascensionIndex: usize = 0;
 
+pub var augmentSelectOpen: bool = false;
 var roundActive: bool = false;
 var roundIdx: usize = 0;
 var elapsedRoundTime: f32 = 0;
@@ -133,10 +134,22 @@ pub fn updateResources(delta: Resources) bool {
     return true;
 }
 
-pub fn addAugment(augmentIdx: usize) void {
+pub fn selectAugment(augmentIdx: usize) void {
     var augment = aug.augments[augmentIdx];
     if (augment.callbacks.init) |e| e(&augment);
     activeAugments.append(augment) catch unreachable;
+
+    augmentSelectOpen = false;
+    roundActive = true;
+}
+
+pub fn getAugment(augmentIdx: usize) Augment {
+    return aug.augments[augmentIdx];
+}
+
+pub fn openAugmentSelectMenu() void {
+    augmentSelectOpen = true;
+    roundActive = false;
 }
 
 pub fn main() !void {
@@ -160,12 +173,11 @@ pub fn main() !void {
     const tileHighlightTexture = try rl.loadTexture("./assets/sprites/tile_highlight.png");
     const buildingTexture = try rl.loadTexture("./assets/sprites/building.png");
 
+    openAugmentSelectMenu();
+
     handleMessage(Message{ .roundStart = {} });
 
-    roundActive = true;
-
     while (!rl.windowShouldClose()) {
-        gui.draw();
         updateAim();
 
         if (roundActive) {
@@ -180,6 +192,7 @@ pub fn main() !void {
                         endGame(true);
                     } else {
                         // start next round
+                        openAugmentSelectMenu();
                         elapsedRoundTime = 0;
                         resources.gold = 0;
                     }
@@ -211,6 +224,7 @@ pub fn main() !void {
         defer rl.endDrawing();
 
         drawGrid(tileTexture, tileHighlightTexture, buildingTexture);
+        gui.draw();
         drawHUD();
 
         rl.clearBackground(.black);
@@ -301,9 +315,18 @@ fn drawGrid(tileSprite: rl.Texture2D, highlightSprite: rl.Texture2D, buildingSpr
 
             rl.drawTexturePro(tileSprite, src, dest, .{ .x = 0, .y = 0 }, 0, .white);
 
-            if (hoveredTile) |t| {
-                if (t.x == @as(f32, @floatFromInt(x)) and t.y == @as(f32, @floatFromInt(y))) {
-                    rl.drawTexturePro(highlightSprite, src, dest, .{ .x = 0, .y = 0 }, 0, .white);
+            if (roundActive) {
+                if (hoveredTile) |t| {
+                    if (t.x == @as(f32, @floatFromInt(x)) and t.y == @as(f32, @floatFromInt(y))) {
+                        rl.drawTexturePro(
+                            highlightSprite,
+                            src,
+                            dest,
+                            .{ .x = 0, .y = 0 },
+                            0,
+                            .white,
+                        );
+                    }
                 }
             }
 

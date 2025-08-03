@@ -18,7 +18,7 @@ pub const buildings = [9]Building{
         .yield = .{ .gas = 10 },
     },
     .{
-        .name = "Market", // f.k.a kindlehall
+        .name = "Market", // fka kindlehall
         .description = "Produces gold",
         .productionDuration = 3,
         .yield = .{ .gold = 1 },
@@ -30,7 +30,7 @@ pub const buildings = [9]Building{
         .yield = .{ .minerals = 50 },
     },
     .{
-        .name = "Sky Port", // f.k.a pyrocore
+        .name = "Sky Port", // fka pyrocore
         .description = "Produces lots of gold",
         .productionDuration = 3,
         .yield = .{ .gold = 15 },
@@ -66,8 +66,8 @@ pub const buildings = [9]Building{
 };
 
 pub const Building = struct {
-    name: []const u8,
-    description: []const u8,
+    name: [:0]const u8,
+    description: [:0]const u8,
     productionDuration: f32,
     yield: Resources,
     locked: bool = false,

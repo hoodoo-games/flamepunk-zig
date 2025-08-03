@@ -11,6 +11,7 @@ var buildingBtnTex: Texture2D = undefined;
 var buildingBtnLockedTex: Texture2D = undefined;
 var demolishBtnTex: Texture2D = undefined;
 var coinTex: Texture2D = undefined;
+var augmentCardTex: Texture2D = undefined;
 
 fn pointInRect(point: Vector2, rect: rl.Rectangle) bool {
     const offset = point.subtract(.{ .x = rect.x, .y = rect.y });
@@ -22,6 +23,7 @@ pub fn init(_: Allocator) void {
     buildingBtnLockedTex = rl.loadTexture("./assets/sprites/building_btn_locked.png") catch unreachable;
     demolishBtnTex = rl.loadTexture("./assets/sprites/demolish_btn.png") catch unreachable;
     coinTex = rl.loadTexture("./assets/sprites/coin.png") catch unreachable;
+    augmentCardTex = rl.loadTexture("./assets/sprites/augment_card.png") catch unreachable;
 }
 
 pub fn deinit() void {}
@@ -31,7 +33,12 @@ pub fn draw() void {
 }
 
 fn drawHUD() void {
-    drawConstructionMenu();
+    if (main.augmentSelectOpen) {
+        drawAugmentSelectMenu();
+    } else {
+        drawConstructionMenu();
+    }
+
     drawGoldQuota();
 }
 
@@ -80,6 +87,16 @@ fn drawBuildingBtn(archetypeIdx: usize, pos: Vector2) void {
         0,
         if (lmbDown) .gray else if (hovered) .light_gray else if (selected) .orange else .white,
     );
+
+    if (hovered) {
+        rl.drawText(
+            if (building.locked) "???" else building.name,
+            @intFromFloat(pos.x),
+            @intFromFloat(pos.y - 10 * main.PX_SCALE),
+            6 * main.PX_SCALE,
+            .white,
+        );
+    }
 }
 
 fn drawDemolishButton(pos: Vector2) void {
@@ -146,4 +163,66 @@ fn drawGoldQuota() void {
         10 * main.PX_SCALE,
         .white,
     );
+}
+
+fn drawAugmentSelectMenu() void {
+    const screen = main.screenSize().scale(1 / main.PX_SCALE);
+    const padding = 10;
+    const origin = Vector2{ .x = screen.x / 2 - (2 * (56 + padding) / 2), .y = screen.y / 2 };
+
+    rl.drawRectangle(
+        0,
+        0,
+        rl.getScreenWidth(),
+        rl.getScreenHeight(),
+        .{ .r = 0, .g = 0, .b = 0, .a = 175 },
+    );
+
+    rl.drawText(
+        "SELECT AN AUGMENT",
+        @intFromFloat((screen.x / 2 - 55) * main.PX_SCALE),
+        @intFromFloat((screen.y / 2 - 60) * main.PX_SCALE),
+        10 * main.PX_SCALE,
+        .orange,
+    );
+
+    for (0..3) |i| {
+        drawAugmentCard(0, origin.add(.{ .x = @as(f32, @floatFromInt(i)) * (56 + padding), .y = 0 }));
+    }
+}
+
+fn drawAugmentCard(augmentIdx: usize, pos: Vector2) void {
+    const src: rl.Rectangle = .{ .x = 0, .y = 0, .width = 56, .height = 78 };
+    const dest: rl.Rectangle = .{
+        .x = (pos.x - 56 / 2) * main.PX_SCALE,
+        .y = (pos.y - 78 / 2) * main.PX_SCALE,
+        .width = 56 * main.PX_SCALE,
+        .height = 78 * main.PX_SCALE,
+    };
+
+    const hovered = pointInRect(rl.getMousePosition(), dest);
+    const lmbDown = hovered and rl.isMouseButtonDown(.left);
+
+    if (hovered and rl.isMouseButtonReleased(.left)) main.selectAugment(augmentIdx);
+
+    const augment = main.getAugment(augmentIdx);
+
+    rl.drawTexturePro(
+        augmentCardTex,
+        src,
+        dest,
+        .{ .x = 0, .y = 0 },
+        0,
+        if (lmbDown) .gray else if (hovered) .light_gray else .white,
+    );
+
+    if (hovered) {
+        rl.drawText(
+            augment.name,
+            @intFromFloat(dest.x),
+            @intFromFloat(dest.y + 80 * main.PX_SCALE),
+            6 * main.PX_SCALE,
+            .white,
+        );
+    }
 }
