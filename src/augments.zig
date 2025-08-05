@@ -21,6 +21,11 @@ pub const augments = [_]Augment{
         .properties = .{ .buildingUnlock = .{ .archetypeIdx = 7 } },
         .callbacks = .{ .init = unlockBuilding },
     },
+    .{
+        .name = "...",
+        .description = "...",
+        .callbacks = .{},
+    },
 };
 
 fn chainReaction(_: *Augment, m: *Message) void {
@@ -65,3 +70,32 @@ pub const Augment = struct {
         },
     };
 };
+
+pub fn getRemainingAugmentCount() usize {
+    var count: usize = 0;
+    for (augments) |a| {
+        var alreadySelected = false;
+        for (main.activeAugments.items) |active| {
+            if (std.mem.eql(u8, a.name, active.name)) {
+                alreadySelected = true;
+                break;
+            }
+        }
+
+        if (!alreadySelected) count += 1;
+    }
+
+    return count;
+}
+
+pub fn getRandomAugments(buffer: []usize) usize {
+    var numReturned: usize = 0;
+    const qty = @min(buffer.len, getRemainingAugmentCount());
+
+    for (0..qty) |i| {
+        buffer[i] = i; //TODO generate random index
+        numReturned += 1;
+    }
+
+    return numReturned;
+}

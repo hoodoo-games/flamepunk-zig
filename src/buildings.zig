@@ -23,7 +23,7 @@ pub const buildings = [9]Building{
         .name = "Market", // fka kindlehall
         .description = "Produces gold",
         .cooldown = 3,
-        .price = .{ .minerals = 250 },
+        .price = .{ .minerals = 50 },
         .yield = .{ .gold = 5 },
     },
     .{

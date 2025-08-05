@@ -1,6 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib");
 const main = @import("main.zig");
+const aug = @import("augments.zig");
 
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
@@ -165,6 +166,8 @@ fn drawGoldQuota() void {
     );
 }
 
+var augmentBuf: [3]usize = .{undefined} ** 3;
+
 fn drawAugmentSelectMenu() void {
     const screen = main.screenSize().scale(1 / main.PX_SCALE);
     const padding = 10;
@@ -186,8 +189,10 @@ fn drawAugmentSelectMenu() void {
         .orange,
     );
 
-    for (0..3) |i| {
-        drawAugmentCard(0, origin.add(.{ .x = @as(f32, @floatFromInt(i)) * (56 + padding), .y = 0 }));
+    const qty = @min(3, aug.getRandomAugments(&augmentBuf));
+    const qtyInv: f32 = @floatFromInt(3 - qty);
+    for (0.., augmentBuf) |i, aIdx| {
+        drawAugmentCard(aIdx, origin.add(.{ .x = (@as(f32, @floatFromInt(i)) + qtyInv * 0.5) * (56 + padding), .y = 0 }));
     }
 }
 

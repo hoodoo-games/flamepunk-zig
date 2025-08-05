@@ -41,7 +41,7 @@ var roundActive: bool = false;
 var roundIdx: usize = 0;
 var elapsedRoundTime: f32 = 0;
 
-var activeAugments: ArrayList(Augment) = undefined;
+pub var activeAugments: ArrayList(Augment) = undefined;
 var activeBuildings: [9]Building = undefined;
 
 var victory: ?bool = null;
