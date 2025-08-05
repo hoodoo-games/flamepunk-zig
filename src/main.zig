@@ -115,7 +115,32 @@ pub const Resources = struct {
             .gold = self.gold + other.gold,
         };
     }
+
+    pub fn negate(self: Resources) Resources {
+        return .{
+            .minerals = -self.minerals,
+            .gas = -self.gas,
+            .gold = -self.gold,
+        };
+    }
+
+    pub fn scale(self: Resources, scalar: f32) Resources {
+        return .{
+            .minerals = self.minerals * scalar,
+            .gas = self.gas * scalar,
+            .gold = self.gold * scalar,
+        };
+    }
 };
+
+/// checks if this delta is a valid resource update
+pub fn canAfford(delta: Resources) bool {
+    const minerals = resources.minerals + delta.minerals;
+    const gas = resources.gas + delta.gas;
+    const gold = resources.gold + delta.gold;
+
+    return minerals >= 0 and gas >= 0 and gold >= 0;
+}
 
 /// transactional resource update
 pub fn updateResources(delta: Resources) bool {
@@ -124,7 +149,7 @@ pub fn updateResources(delta: Resources) bool {
     const gold = resources.gold + delta.gold;
 
     // rollback if any of the new totals are negative
-    if (minerals < 0 or gas < 0 or gold < 0) return false;
+    if (!canAfford(delta)) return false;
 
     // commit new resource totals
     resources.minerals = minerals;
@@ -171,7 +196,9 @@ pub fn main() !void {
 
     const tileTexture = try rl.loadTexture("./assets/sprites/tile.png");
     const tileHighlightTexture = try rl.loadTexture("./assets/sprites/tile_highlight.png");
-    const buildingTexture = try rl.loadTexture("./assets/sprites/building.png");
+    bld.loadBuildingTextures();
+
+    _ = updateResources(ascension().startingResources);
 
     openAugmentSelectMenu();
 
@@ -223,7 +250,7 @@ pub fn main() !void {
         rl.beginDrawing();
         defer rl.endDrawing();
 
-        drawGrid(tileTexture, tileHighlightTexture, buildingTexture);
+        drawGrid(tileTexture, tileHighlightTexture);
         gui.draw();
         drawHUD();
 
@@ -232,6 +259,8 @@ pub fn main() !void {
 }
 
 fn placeBuilding(coord: Vector2, archetypeIdx: usize) void {
+    if (!updateResources(building(archetypeIdx).price.negate())) return;
+
     // destroy obstructing building if exists
     if (tiles[tileCoordToIdx(coord)].building != null) demolishBuilding(coord);
 
@@ -239,7 +268,11 @@ fn placeBuilding(coord: Vector2, archetypeIdx: usize) void {
 }
 
 fn demolishBuilding(coord: Vector2) void {
-    //TODO deferred destruction
+    // refund 50% of building price
+    if (tiles[tileCoordToIdx(coord)].building) |b| {
+        _ = updateResources(building(b.archetypeIdx).price.scale(0.5));
+    }
+
     tiles[tileCoordToIdx(coord)].building = null;
 }
 
@@ -282,8 +315,8 @@ fn updateBuildings() void {
         if (t.building) |*b| {
             const archetype = activeBuildings[b.archetypeIdx];
 
-            b.elapsedProductionTime += rl.getFrameTime();
-            if (b.elapsedProductionTime >= archetype.productionDuration) {
+            b.elapsedCooldown += rl.getFrameTime();
+            if (b.elapsedCooldown >= archetype.cooldown) {
                 b.produce();
             }
         }
@@ -298,7 +331,7 @@ fn tileCoordToIdx(coord: Vector2) usize {
     return @intFromFloat(coord.x + coord.y * MAP_SIZE);
 }
 
-fn drawGrid(tileSprite: rl.Texture2D, highlightSprite: rl.Texture2D, buildingSprite: rl.Texture2D) void {
+fn drawGrid(tileSprite: rl.Texture2D, highlightSprite: rl.Texture2D) void {
     for (0..MAP_SIZE) |y| {
         for (0..MAP_SIZE) |x| {
             const pos = Vector2{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
@@ -341,8 +374,15 @@ fn drawGrid(tileSprite: rl.Texture2D, highlightSprite: rl.Texture2D, buildingSpr
                 .height = 40 * PX_SCALE,
             };
 
-            if (t.building != null) {
-                rl.drawTexturePro(buildingSprite, s, d, .{ .x = 0, .y = 8 * PX_SCALE }, 0, .white);
+            if (t.building) |b| {
+                rl.drawTexturePro(
+                    bld.buildingTextures[b.archetypeIdx],
+                    s,
+                    d,
+                    .{ .x = 0, .y = 8 * PX_SCALE },
+                    0,
+                    .white,
+                );
             }
         }
     }

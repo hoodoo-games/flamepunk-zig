@@ -8,58 +8,67 @@ pub const buildings = [9]Building{
     .{
         .name = "Mine",
         .description = "Basic mineral and gas production",
-        .productionDuration = 3,
+        .cooldown = 3,
+        .price = .{ .minerals = 30 },
         .yield = .{ .minerals = 3, .gas = 1 },
     },
     .{
         .name = "Extractor",
         .description = "Advanced gas production",
-        .productionDuration = 3,
+        .cooldown = 3,
+        .price = .{ .minerals = 100 },
         .yield = .{ .gas = 10 },
     },
     .{
         .name = "Market", // fka kindlehall
         .description = "Produces gold",
-        .productionDuration = 3,
-        .yield = .{ .gold = 1 },
+        .cooldown = 3,
+        .price = .{ .minerals = 250 },
+        .yield = .{ .gold = 5 },
     },
     .{
         .name = "Quarry",
         .description = "Advanced mineral production",
-        .productionDuration = 3,
+        .cooldown = 3,
+        .price = .{ .minerals = 150, .gas = 500 },
         .yield = .{ .minerals = 50 },
     },
     .{
         .name = "Sky Port", // fka pyrocore
         .description = "Produces lots of gold",
-        .productionDuration = 3,
+        .cooldown = 3,
+        .price = .{},
         .yield = .{ .gold = 15 },
     },
     .{
         .name = "Gravity Stone",
         .description = "...",
-        .productionDuration = 1,
+        .cooldown = 3,
+        .price = .{ .minerals = 100, .gas = 100 },
         .yield = .{},
         .locked = true,
     },
     .{
         .name = "Mountainshell",
         .description = "...",
-        .productionDuration = 1,
+        .cooldown = 5,
+        .price = .{ .minerals = 100, .gas = 100 },
         .yield = .{},
         .locked = true,
     },
     .{
         .name = "Insanity Lab",
         .description = "...",
-        .productionDuration = 1,
-        .yield = .{},
+        .cooldown = 6,
+        .price = .{ .minerals = 3141, .gas = 592 },
+        .yield = .{ .minerals = -53, .gas = 58, .gold = 97 },
         .locked = true,
     },
     .{
         .name = "Obelisk",
         .description = "PONDER THE OBELISK",
-        .productionDuration = 5,
+        .cooldown = 5,
+        .price = .{ .minerals = 100, .gas = 100 },
         .yield = .{ .gold = 1000 },
         .locked = true,
     },
@@ -68,14 +77,15 @@ pub const buildings = [9]Building{
 pub const Building = struct {
     name: [:0]const u8,
     description: [:0]const u8,
-    productionDuration: f32,
+    cooldown: f32,
+    price: Resources,
     yield: Resources,
     locked: bool = false,
 };
 
 pub const PlacedBuilding = struct {
     archetypeIdx: usize,
-    elapsedProductionTime: f32 = 0,
+    elapsedCooldown: f32 = 0,
     productionDurationModifier: f32 = 0,
     yieldModifier: Resources = .{},
 
@@ -83,8 +93,8 @@ pub const PlacedBuilding = struct {
         return buildings[self.archetypeIdx];
     }
 
-    pub fn productionDuration(self: *const PlacedBuilding) f32 {
-        return self.archetype().productionDuration + self.productionDurationModifier;
+    pub fn cooldown(self: *const PlacedBuilding) f32 {
+        return self.archetype().cooldown + self.productionDurationModifier;
     }
 
     pub fn yield(self: *const PlacedBuilding) Resources {
@@ -97,6 +107,22 @@ pub const PlacedBuilding = struct {
             .yield = self.yield(),
         } });
 
-        self.elapsedProductionTime = 0;
+        self.elapsedCooldown = 0;
     }
 };
+
+pub var buildingTextures: [buildings.len]rl.Texture2D = .{undefined} ** buildings.len;
+
+pub fn loadBuildingTextures() void {
+    var buf: [64]u8 = .{0} ** 64;
+
+    for (0..buildingTextures.len) |i| {
+        const path = std.fmt.bufPrintZ(
+            &buf,
+            "./assets/sprites/buildings/{s}.png",
+            .{buildings[i].name},
+        ) catch unreachable;
+
+        buildingTextures[i] = rl.loadTexture(path) catch unreachable;
+    }
+}
