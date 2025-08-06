@@ -166,8 +166,6 @@ fn drawGoldQuota() void {
     );
 }
 
-var augmentBuf: [3]usize = .{undefined} ** 3;
-
 fn drawAugmentSelectMenu() void {
     const screen = main.screenSize().scale(1 / main.PX_SCALE);
     const padding = 10;
@@ -189,10 +187,12 @@ fn drawAugmentSelectMenu() void {
         .orange,
     );
 
-    const qty = @min(3, aug.getRandomAugments(&augmentBuf));
+    const qty = @min(3, main.augmentSelectionPool.len);
     const qtyInv: f32 = @floatFromInt(3 - qty);
-    for (0.., augmentBuf) |i, aIdx| {
-        drawAugmentCard(aIdx, origin.add(.{ .x = (@as(f32, @floatFromInt(i)) + qtyInv * 0.5) * (56 + padding), .y = 0 }));
+    for (0.., main.augmentSelectionPool) |i, a| {
+        if (a) |idx| {
+            drawAugmentCard(idx, origin.add(.{ .x = (@as(f32, @floatFromInt(i)) + qtyInv * 0.5) * (56 + padding), .y = 0 }));
+        }
     }
 }
 

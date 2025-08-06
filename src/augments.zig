@@ -73,29 +73,46 @@ pub const Augment = struct {
 
 pub fn getRemainingAugmentCount() usize {
     var count: usize = 0;
-    for (augments) |a| {
-        var alreadySelected = false;
-        for (main.activeAugments.items) |active| {
-            if (std.mem.eql(u8, a.name, active.name)) {
-                alreadySelected = true;
-                break;
-            }
-        }
-
-        if (!alreadySelected) count += 1;
+    for (0..augments.len) |i| {
+        if (!isAugmentActive(i)) count += 1;
     }
 
     return count;
 }
 
-pub fn getRandomAugments(buffer: []usize) usize {
+pub fn isAugmentActive(augmentIdx: usize) bool {
+    for (main.activeAugments.items) |active| {
+        if (std.mem.eql(u8, augments[augmentIdx].name, active.name)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+pub fn getRandomAugments(buffer: []?usize) usize {
+    @memset(buffer, null);
+
     var numReturned: usize = 0;
     const qty = @min(buffer.len, getRemainingAugmentCount());
 
     for (0..qty) |i| {
-        buffer[i] = i; //TODO generate random index
+        var randIdx: usize = @intCast(rl.getRandomValue(0, @as(i32, @intCast(qty)) - 1));
+        while (isAugmentActive(randIdx) or arrayContains(randIdx, buffer)) {
+            randIdx = @intCast(rl.getRandomValue(0, @as(i32, @intCast(augments.len)) - 1));
+        }
+
+        buffer[i] = randIdx;
         numReturned += 1;
     }
 
     return numReturned;
+}
+
+fn arrayContains(value: usize, buffer: []?usize) bool {
+    for (buffer) |v| {
+        if (v == value) return true;
+    }
+
+    return false;
 }

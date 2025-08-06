@@ -172,7 +172,14 @@ pub fn getAugment(augmentIdx: usize) Augment {
     return aug.augments[augmentIdx];
 }
 
+var augmentBuf: [3]?usize = .{null} ** 3;
+pub var augmentSelectionPool: []?usize = augmentBuf[0..3];
 pub fn openAugmentSelectMenu() void {
+    if (aug.getRemainingAugmentCount() <= 0) return;
+
+    const numAugments = aug.getRandomAugments(&augmentBuf);
+    augmentSelectionPool = augmentBuf[0..numAugments];
+
     augmentSelectOpen = true;
     roundActive = false;
 }
