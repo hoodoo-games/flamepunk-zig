@@ -1,8 +1,8 @@
 const std = @import("std");
 const rl = @import("raylib");
-const main = @import("main.zig");
+const state = @import("state.zig");
 
-const Resources = main.Resources;
+const Resources = state.Resources;
 
 pub const buildings = [9]Building{
     .{
@@ -102,7 +102,7 @@ pub const PlacedBuilding = struct {
     }
 
     pub fn produce(self: *PlacedBuilding) void {
-        main.handleMessage(.{ .buildingProduced = .{
+        state.handleMessage(.{ .buildingProduced = .{
             .building = self,
             .yield = self.yield(),
         } });

@@ -1,7 +1,8 @@
 const std = @import("std");
 const rl = @import("raylib");
-const main = @import("main.zig");
+const state = @import("state.zig");
 const aug = @import("augments.zig");
+const utils = @import("utils.zig");
 
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
@@ -34,7 +35,7 @@ pub fn draw() void {
 }
 
 fn drawHUD() void {
-    if (main.augmentSelectOpen) {
+    if (state.isAugmentSelectOpen()) {
         drawAugmentSelectMenu();
     } else {
         drawConstructionMenu();
@@ -44,7 +45,7 @@ fn drawHUD() void {
 }
 
 fn drawConstructionMenu() void {
-    const screen = main.screenSize().scale(1 / main.PX_SCALE);
+    const screen = utils.screenSize().scale(1 / utils.PX_SCALE);
     const padding = 5;
     const origin = Vector2{ .x = 5, .y = screen.y - 3 * (32 + padding) };
 
@@ -53,13 +54,13 @@ fn drawConstructionMenu() void {
             const pos = (Vector2{
                 .x = @as(f32, @floatFromInt(x)) * (32 + padding),
                 .y = @as(f32, @floatFromInt(y)) * (32 + padding),
-            }).add(origin).scale(main.PX_SCALE);
+            }).add(origin).scale(utils.PX_SCALE);
 
             drawBuildingBtn(x + y * 3, pos);
         }
     }
 
-    drawDemolishButton(origin.add(.{ .x = 3 * (32 + padding), .y = 2 * (32 + padding) }).scale(main.PX_SCALE));
+    drawDemolishButton(origin.add(.{ .x = 3 * (32 + padding), .y = 2 * (32 + padding) }).scale(utils.PX_SCALE));
 }
 
 fn drawBuildingBtn(archetypeIdx: usize, pos: Vector2) void {
@@ -68,17 +69,17 @@ fn drawBuildingBtn(archetypeIdx: usize, pos: Vector2) void {
     const dest: rl.Rectangle = .{
         .x = pos.x,
         .y = pos.y,
-        .width = 32 * main.PX_SCALE,
-        .height = 32 * main.PX_SCALE,
+        .width = 32 * utils.PX_SCALE,
+        .height = 32 * utils.PX_SCALE,
     };
 
     const hovered = pointInRect(rl.getMousePosition(), dest);
     const lmbDown = hovered and rl.isMouseButtonDown(.left);
-    const selected = if (main.selectedBuilding()) |idx| idx == archetypeIdx else false;
+    const selected = if (state.getSelectedBuilding()) |idx| idx == archetypeIdx else false;
 
-    if (hovered and rl.isMouseButtonReleased(.left)) main.selectBuilding(archetypeIdx);
+    if (hovered and rl.isMouseButtonReleased(.left)) state.selectBuilding(archetypeIdx);
 
-    const building = main.building(archetypeIdx);
+    const building = state.getBuilding(archetypeIdx);
 
     rl.drawTexturePro(
         if (building.locked) buildingBtnLockedTex else buildingBtnTex,
@@ -93,8 +94,8 @@ fn drawBuildingBtn(archetypeIdx: usize, pos: Vector2) void {
         rl.drawText(
             if (building.locked) "???" else building.name,
             @intFromFloat(pos.x),
-            @intFromFloat(pos.y - 10 * main.PX_SCALE),
-            6 * main.PX_SCALE,
+            @intFromFloat(pos.y - 10 * utils.PX_SCALE),
+            6 * utils.PX_SCALE,
             .white,
         );
     }
@@ -106,19 +107,19 @@ fn drawDemolishButton(pos: Vector2) void {
     const dest: rl.Rectangle = .{
         .x = pos.x,
         .y = pos.y,
-        .width = 32 * main.PX_SCALE,
-        .height = 32 * main.PX_SCALE,
+        .width = 32 * utils.PX_SCALE,
+        .height = 32 * utils.PX_SCALE,
     };
 
     const hovered = pointInRect(rl.getMousePosition(), dest);
     const lmbDown = hovered and rl.isMouseButtonDown(.left);
 
-    const selected = switch (main.placementMode) {
+    const selected = switch (state.placementMode) {
         .demolish => true,
         else => false,
     };
 
-    if (hovered and rl.isMouseButtonReleased(.left)) main.placementMode = .demolish;
+    if (hovered and rl.isMouseButtonReleased(.left)) state.placementMode = .demolish;
 
     rl.drawTexturePro(
         demolishBtnTex,
@@ -131,15 +132,15 @@ fn drawDemolishButton(pos: Vector2) void {
 }
 
 fn drawGoldQuota() void {
-    const screen = main.screenSize().scale(1 / main.PX_SCALE);
+    const screen = utils.screenSize().scale(1 / utils.PX_SCALE);
     const origin = Vector2{ .x = screen.x - 125, .y = screen.y - 15 };
 
     const src: rl.Rectangle = .{ .x = 0, .y = 0, .width = 10, .height = 10 };
     const dest: rl.Rectangle = .{
-        .x = origin.x * main.PX_SCALE,
-        .y = origin.y * main.PX_SCALE,
-        .width = 10 * main.PX_SCALE,
-        .height = 10 * main.PX_SCALE,
+        .x = origin.x * utils.PX_SCALE,
+        .y = origin.y * utils.PX_SCALE,
+        .width = 10 * utils.PX_SCALE,
+        .height = 10 * utils.PX_SCALE,
     };
 
     rl.drawTexturePro(
@@ -153,21 +154,21 @@ fn drawGoldQuota() void {
 
     var buf: [32]u8 = .{0} ** 32;
     const str = std.fmt.bufPrintZ(&buf, "{d:.0} / {d:.0}", .{
-        main.resources.gold,
-        main.goldQuota(),
+        state.getResources().gold,
+        state.getGoldQuota(),
     }) catch unreachable;
 
     rl.drawText(
         str,
-        @intFromFloat(origin.x * main.PX_SCALE + 40),
-        @intFromFloat(origin.y * main.PX_SCALE),
-        10 * main.PX_SCALE,
+        @intFromFloat(origin.x * utils.PX_SCALE + 40),
+        @intFromFloat(origin.y * utils.PX_SCALE),
+        10 * utils.PX_SCALE,
         .white,
     );
 }
 
 fn drawAugmentSelectMenu() void {
-    const screen = main.screenSize().scale(1 / main.PX_SCALE);
+    const screen = utils.screenSize().scale(1 / utils.PX_SCALE);
     const padding = 10;
     const origin = Vector2{ .x = screen.x / 2 - (2 * (56 + padding) / 2), .y = screen.y / 2 };
 
@@ -181,15 +182,15 @@ fn drawAugmentSelectMenu() void {
 
     rl.drawText(
         "SELECT AN AUGMENT",
-        @intFromFloat((screen.x / 2 - 55) * main.PX_SCALE),
-        @intFromFloat((screen.y / 2 - 60) * main.PX_SCALE),
-        10 * main.PX_SCALE,
+        @intFromFloat((screen.x / 2 - 55) * utils.PX_SCALE),
+        @intFromFloat((screen.y / 2 - 60) * utils.PX_SCALE),
+        10 * utils.PX_SCALE,
         .orange,
     );
 
-    const qty = @min(3, main.augmentSelectionPool.len);
+    const qty = @min(3, state.augmentSelectionPool.len);
     const qtyInv: f32 = @floatFromInt(3 - qty);
-    for (0.., main.augmentSelectionPool) |i, a| {
+    for (0.., state.augmentSelectionPool) |i, a| {
         if (a) |idx| {
             drawAugmentCard(idx, origin.add(.{ .x = (@as(f32, @floatFromInt(i)) + qtyInv * 0.5) * (56 + padding), .y = 0 }));
         }
@@ -199,18 +200,18 @@ fn drawAugmentSelectMenu() void {
 fn drawAugmentCard(augmentIdx: usize, pos: Vector2) void {
     const src: rl.Rectangle = .{ .x = 0, .y = 0, .width = 56, .height = 78 };
     const dest: rl.Rectangle = .{
-        .x = (pos.x - 56 / 2) * main.PX_SCALE,
-        .y = (pos.y - 78 / 2) * main.PX_SCALE,
-        .width = 56 * main.PX_SCALE,
-        .height = 78 * main.PX_SCALE,
+        .x = (pos.x - 56 / 2) * utils.PX_SCALE,
+        .y = (pos.y - 78 / 2) * utils.PX_SCALE,
+        .width = 56 * utils.PX_SCALE,
+        .height = 78 * utils.PX_SCALE,
     };
 
     const hovered = pointInRect(rl.getMousePosition(), dest);
     const lmbDown = hovered and rl.isMouseButtonDown(.left);
 
-    if (hovered and rl.isMouseButtonReleased(.left)) main.selectAugment(augmentIdx);
+    if (hovered and rl.isMouseButtonReleased(.left)) state.selectAugment(augmentIdx);
 
-    const augment = main.getAugment(augmentIdx);
+    const augment = state.getAugment(augmentIdx);
 
     rl.drawTexturePro(
         augmentCardTex,
@@ -225,8 +226,8 @@ fn drawAugmentCard(augmentIdx: usize, pos: Vector2) void {
         rl.drawText(
             augment.name,
             @intFromFloat(dest.x),
-            @intFromFloat(dest.y + 80 * main.PX_SCALE),
-            6 * main.PX_SCALE,
+            @intFromFloat(dest.y + 80 * utils.PX_SCALE),
+            6 * utils.PX_SCALE,
             .white,
         );
     }

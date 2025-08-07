@@ -1,8 +1,8 @@
 const std = @import("std");
 const rl = @import("raylib");
-const main = @import("main.zig");
+const state = @import("state.zig");
 
-const Resources = main.Resources;
+const Resources = state.Resources;
 
 pub const ascensions = [_]Ascension{
     .{

@@ -1,12 +1,12 @@
 const std = @import("std");
 const rl = @import("raylib");
-const main = @import("main.zig");
+const state = @import("state.zig");
 
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 const Vector2 = rl.Vector2;
 const Texture2D = rl.Texture2D;
-const Message = main.Message;
+const Message = state.Message;
 
 pub const augments = [_]Augment{
     .{
@@ -40,7 +40,7 @@ fn chainReaction(_: *Augment, m: *Message) void {
 fn unlockBuilding(self: *Augment) void {
     switch (self.properties) {
         .buildingUnlock => |v| {
-            main.unlockBuilding(v.archetypeIdx);
+            state.unlockBuilding(v.archetypeIdx);
         },
         else => {},
     }
@@ -81,7 +81,7 @@ pub fn getRemainingAugmentCount() usize {
 }
 
 pub fn isAugmentActive(augmentIdx: usize) bool {
-    for (main.activeAugments.items) |active| {
+    for (state.activeAugments.items) |active| {
         if (std.mem.eql(u8, augments[augmentIdx].name, active.name)) {
             return true;
         }
