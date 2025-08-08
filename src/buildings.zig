@@ -5,42 +5,43 @@ const state = @import("state.zig");
 const Resources = state.Resources;
 
 pub const buildings = [9]Building{
-    .{
+    .{ // 0
         .name = "Mine",
         .description = "Basic mineral and gas production",
         .cooldown = 3,
         .price = .{ .minerals = 30 },
         .yield = .{ .minerals = 3, .gas = 1 },
     },
-    .{
+    .{ // 1
         .name = "Extractor",
         .description = "Advanced gas production",
         .cooldown = 3,
         .price = .{ .minerals = 100 },
         .yield = .{ .gas = 10 },
     },
-    .{
+    .{ // 2
         .name = "Market", // fka kindlehall
         .description = "Produces gold",
         .cooldown = 3,
         .price = .{ .minerals = 50 },
         .yield = .{ .gold = 5 },
     },
-    .{
+    .{ // 3
         .name = "Quarry",
         .description = "Advanced mineral production",
         .cooldown = 3,
         .price = .{ .minerals = 150, .gas = 500 },
         .yield = .{ .minerals = 50 },
     },
-    .{
+    .{ // 4
         .name = "Sky Port", // fka pyrocore
         .description = "Produces lots of gold",
         .cooldown = 3,
         .price = .{},
         .yield = .{ .gold = 15 },
+        .locked = true,
     },
-    .{
+    .{ // 5
         .name = "Gravity Stone",
         .description = "...",
         .cooldown = 3,
@@ -48,7 +49,7 @@ pub const buildings = [9]Building{
         .yield = .{},
         .locked = true,
     },
-    .{
+    .{ // 6
         .name = "Mountainshell",
         .description = "...",
         .cooldown = 5,
@@ -56,7 +57,7 @@ pub const buildings = [9]Building{
         .yield = .{},
         .locked = true,
     },
-    .{
+    .{ // 7
         .name = "Insanity Lab",
         .description = "...",
         .cooldown = 6,
@@ -64,7 +65,7 @@ pub const buildings = [9]Building{
         .yield = .{ .minerals = -53, .gas = 58, .gold = 97 },
         .locked = true,
     },
-    .{
+    .{ // 8
         .name = "Obelisk",
         .description = "PONDER THE OBELISK",
         .cooldown = 5,

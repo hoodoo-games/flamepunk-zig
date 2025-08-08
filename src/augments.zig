@@ -10,10 +10,22 @@ const Message = state.Message;
 
 pub const augments = [_]Augment{
     .{
-        .name = "Chain Reaction",
-        .description = "5% chance to make all gas buildings produce when a gas building produces.",
-        .properties = .{ .chainReaction = .{ .procChance = 0.05 } },
-        .callbacks = .{ .after = chainReaction },
+        .name = "Wright to Aviation", //fka Bloodrush
+        .description = "Unlocks the skyport",
+        .properties = .{ .buildingUnlock = .{ .archetypeIdx = 4 } },
+        .callbacks = .{ .init = unlockBuilding },
+    },
+    .{
+        .name = "Unlock Gravity Stone",
+        .description = "Unlocks the Gravity Stone building.",
+        .properties = .{ .buildingUnlock = .{ .archetypeIdx = 5 } },
+        .callbacks = .{ .init = unlockBuilding },
+    },
+    .{
+        .name = "Unlock Mountainshell",
+        .description = "Unlocks the Mountainshell building.",
+        .properties = .{ .buildingUnlock = .{ .archetypeIdx = 6 } },
+        .callbacks = .{ .init = unlockBuilding },
     },
     .{
         .name = "Insanity Potion",
@@ -22,11 +34,64 @@ pub const augments = [_]Augment{
         .callbacks = .{ .init = unlockBuilding },
     },
     .{
-        .name = "...",
-        .description = "...",
+        .name = "???",
+        .description = "Unlocks ???",
+        .properties = .{ .buildingUnlock = .{ .archetypeIdx = 8 } },
+        .callbacks = .{ .init = unlockBuilding },
+    },
+    .{ // Example Augment
+        .name = "Chain Reaction",
+        .description = "5% chance to make all gas buildings produce when a gas building produces.",
+        .properties = .{ .chainReaction = .{ .procChance = 0.05 } },
+        .callbacks = .{ .after = chainReaction },
+    },
+    .{
+        .name = "Word on Wallstreet", //fka campfire stories
+        .description = "When a building produces gold, also gain the production of adjacent buildings.",
+        .callbacks = .{},
+    },
+    .{
+        .name = "Glass Tools",
+        .description = "Double all production of minerals for the next fiscal year; breaks afterwards.",
+        .callbacks = .{},
+    },
+    .{
+        .name = "Rapid Industrialization", //fka HOA
+        .description = "All mine buildings produce 1 more of each resource.",
+        .callbacks = .{},
+    },
+    .{
+        .name = "Overtime Policy",
+        .description = "After the fiscal goal has been met, all buildings produce 50% bonus resources for the rest of the year.",
+        .callbacks = .{},
+    },
+    .{
+        .name = "Into Diamonds", //fka Petrified Wood
+        .description = "When you produce gas, also produce 50% of that amount in minerals.",
+        .callbacks = .{},
+    },
+    .{
+        .name = "Trickledown Economics",
+        .description = "Every time you produce 10 gold, also produce 1 gas and 1 minerals.",
         .callbacks = .{},
     },
 };
+
+//fn wordOnWallstreet(_: *Augment, m: *Message) void {
+//    switch (m.*) {
+//        .buildingProduced => |v| {
+//            if (v.archetypeIdx == 2) { // Market
+//                // Gain production from adjacent buildings
+//                for (state.buildings.items) |b| {
+//                    if (b.archetypeIdx != v.archetypeIdx and b.isAdjacentTo(v)) {
+//                        state.produceBuilding(b);
+//                    }
+//                }
+//            }
+//        },
+//        else => {},
+//    }
+//}
 
 fn chainReaction(_: *Augment, m: *Message) void {
     switch (m.*) {
