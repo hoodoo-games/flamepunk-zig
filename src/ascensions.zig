@@ -6,13 +6,13 @@ const Resources = state.Resources;
 
 pub const ascensions = [_]Ascension{
     .{
-        .name = "Demigod",
-        .description = "For those powerful few",
+        .name = "Junior Manager",
+        .description = "A stepping stone for aspiring leaders.",
         .startingResources = .{
             .minerals = 60,
         },
         .numRounds = 6,
-        .roundDuration = 120,
+        .roundDuration = 90,
     },
 };
 
@@ -25,6 +25,6 @@ pub const Ascension = struct {
 
     pub fn goldQuota(_: *const Ascension, round: usize) f32 {
         //TODO gold quota scaling function
-        return @floatFromInt((round + 1) * 100);
+        return @floatFromInt(10 + std.math.pow(usize, 10, round));
     }
 };
