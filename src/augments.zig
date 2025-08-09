@@ -39,22 +39,17 @@ pub const augments = [_]Augment{
     //    .properties = .{ .buildingUnlock = .{ .archetypeIdx = 8 } },
     //    .callbacks = .{ .init = unlockBuilding },
     //},
-    //.{ // Example Augment
-    //    .name = "Chain Reaction",
-    //    .description = "5% chance to make all gas buildings produce when a gas building produces.",
-    //    .properties = .{ .chainReaction = .{ .procChance = 0.05 } },
-    //    .callbacks = .{ .after = chainReaction },
-    //},
     .{
         .name = "Word on Wallstreet", //fka campfire stories
         .description = "When a building produces gold, also gain the production of adjacent buildings.",
         .callbacks = .{ .after = wordOnWallstreet },
     },
-    //.{
-    //    .name = "Glass Tools",
-    //    .description = "Double all production of minerals for the next fiscal year; breaks afterwards.",
-    //    .callbacks = .{},
-    //},
+    .{
+        .name = "Glass Tools",
+        .description = "Double all production of minerals for the next fiscal year; breaks afterwards.",
+        .properties = .{ .glassTools = .{ .hasBroken = false } },
+        .callbacks = .{ .after = glassTools },
+    },
     //.{
     //    .name = "Rapid Industrialization", //fka HOA
     //    .description = "All mine buildings produce 1 more of each resource.",
@@ -99,10 +94,27 @@ fn wordOnWallstreet(_: *Augment, m: *Message) void {
     }
 }
 
-fn chainReaction(_: *Augment, m: *Message) void {
+fn glassTools(self: *Augment, m: *Message) void {
     switch (m.*) {
-        .buildingProduced => {
-            // std.log.debug("AUGMENT {s}", .{self.name});
+        .buildingProduced => |*bpm| {
+            switch (self.properties) {
+                .glassTools => |*gt| {
+                    if (gt.hasBroken) return;
+                    bpm.yield.minerals *= 2;
+                    bpm.yield.gas *= 2;
+                    bpm.yield.gold *= 2;
+                },
+                else => {},
+            }
+        },
+        .roundEnd => {
+            switch (self.properties) {
+                .glassTools => |*gt| {
+                    gt.hasBroken = true;
+                    std.debug.print("Glass Tools have broken!", .{});
+                },
+                else => {},
+            }
         },
         else => {},
     }
@@ -131,15 +143,13 @@ pub const Augment = struct {
         after: ?MessageHandler = null,
     },
 
-    const Properties = union(enum(usize)) {
-        none,
-        chainReaction: struct {
-            procChance: f32,
-        },
-        buildingUnlock: struct {
-            archetypeIdx: usize,
-        },
-    };
+    const Properties = union(enum(usize)) { none, chainReaction: struct {
+        procChance: f32,
+    }, buildingUnlock: struct {
+        archetypeIdx: usize,
+    }, glassTools: struct {
+        hasBroken: bool = false,
+    } };
 };
 
 pub fn getRemainingAugmentCount() usize {
