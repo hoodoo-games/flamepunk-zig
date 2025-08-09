@@ -55,11 +55,11 @@ pub const augments = [_]Augment{
         .description = "All mine buildings produce 1 more of each resource.",
         .callbacks = .{ .add = rapidIndustrialization },
     },
-    //.{
-    //    .name = "Overtime Policy",
-    //    .description = "After the fiscal goal has been met, all buildings produce 50% bonus resources for the rest of the year.",
-    //    .callbacks = .{},
-    //},
+    .{
+        .name = "Overtime Policy",
+        .description = "After the fiscal goal has been met, all buildings produce 50% bonus resources for the rest of the year.",
+        .callbacks = .{ .multiply = overtimePolicy },
+    },
     //.{
     //    .name = "Into Diamonds", //fka Petrified Wood
     //    .description = "When you produce gas, also produce 50% of that amount in minerals.",
@@ -70,6 +70,11 @@ pub const augments = [_]Augment{
     //    .description = "Every time you produce 10 gold, also produce 1 gas and 1 minerals.",
     //    .callbacks = .{},
     //},
+
+    // Augment ideas:
+    // - "Bullish Market" - Halfway through each fiscal year, double your resources
+    // - "Housing Subsidy" - Constructing a building instantly refunds 50% of its cost
+    // - "New Age" - All buildings placed this year and after produce double gas
 };
 
 fn wordOnWallstreet(_: *Augment, m: *Message) void {
@@ -127,6 +132,19 @@ fn rapidIndustrialization(_: *Augment, m: *Message) void {
                 bpm.yield.minerals += 1;
                 bpm.yield.gas += 1;
                 bpm.yield.gold += 1;
+            }
+        },
+        else => {},
+    }
+}
+
+fn overtimePolicy(_: *Augment, m: *Message) void {
+    switch (m.*) {
+        .buildingProduced => |*bpm| {
+            if (state.getResources().gold >= state.getGoldQuota()) {
+                bpm.yield.minerals *= 1.5;
+                bpm.yield.gas *= 1.5;
+                bpm.yield.gold *= 1.5;
             }
         },
         else => {},
