@@ -216,9 +216,11 @@ pub fn update() void {
                     endGame(true);
                 } else {
                     // start next round
+                    handleMessage(.{ .roundEnd = {} });
                     openAugmentSelectMenu();
                     elapsedRoundTime = 0;
                     resources.gold = 0;
+                    handleMessage(.{ .roundStart = {} });
                 }
             } else {
                 endGame(false);
