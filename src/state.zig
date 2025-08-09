@@ -151,8 +151,7 @@ fn placeBuilding(coord: Vector2, archetypeIdx: usize) void {
     // destroy obstructing building if exists
     if (tiles[map.tileCoordToIdx(coord)].building != null) demolishBuilding(coord);
 
-    tiles[map.tileCoordToIdx(coord)].building = .{ .archetypeIdx = archetypeIdx };
-    tiles[map.tileCoordToIdx(coord)].building.position = coord;
+    tiles[map.tileCoordToIdx(coord)].building = .{ .archetypeIdx = archetypeIdx, .gridPos = coord };
 }
 
 /// Demolishes a placed building, refunding 50% of price
