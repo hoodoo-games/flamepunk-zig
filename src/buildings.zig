@@ -89,7 +89,7 @@ pub const PlacedBuilding = struct {
     elapsedCooldown: f32 = 0,
     productionDurationModifier: f32 = 0,
     yieldModifier: Resources = .{},
-    position: rl.Vector2,
+    gridPos: rl.Vector2,
 
     pub fn archetype(self: *const PlacedBuilding) Building {
         return buildings[self.archetypeIdx];
