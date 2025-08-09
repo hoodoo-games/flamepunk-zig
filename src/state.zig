@@ -152,6 +152,7 @@ fn placeBuilding(coord: Vector2, archetypeIdx: usize) void {
     if (tiles[map.tileCoordToIdx(coord)].building != null) demolishBuilding(coord);
 
     tiles[map.tileCoordToIdx(coord)].building = .{ .archetypeIdx = archetypeIdx };
+    tiles[map.tileCoordToIdx(coord)].building.position = coord;
 }
 
 /// Demolishes a placed building, refunding 50% of price
