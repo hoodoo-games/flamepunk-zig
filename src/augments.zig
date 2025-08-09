@@ -50,11 +50,11 @@ pub const augments = [_]Augment{
         .properties = .{ .glassTools = .{ .hasBroken = false } },
         .callbacks = .{ .after = glassTools },
     },
-    //.{
-    //    .name = "Rapid Industrialization", //fka HOA
-    //    .description = "All mine buildings produce 1 more of each resource.",
-    //    .callbacks = .{},
-    //},
+    .{
+        .name = "Rapid Industrialization", //fka HOA
+        .description = "All mine buildings produce 1 more of each resource.",
+        .callbacks = .{ .add = rapidIndustrialization },
+    },
     //.{
     //    .name = "Overtime Policy",
     //    .description = "After the fiscal goal has been met, all buildings produce 50% bonus resources for the rest of the year.",
@@ -114,6 +114,19 @@ fn glassTools(self: *Augment, m: *Message) void {
                     std.debug.print("Glass Tools have broken!", .{});
                 },
                 else => {},
+            }
+        },
+        else => {},
+    }
+}
+
+fn rapidIndustrialization(_: *Augment, m: *Message) void {
+    switch (m.*) {
+        .buildingProduced => |*bpm| {
+            if (bpm.building.archetypeIdx == 0) { // it's a mine
+                bpm.yield.minerals += 1;
+                bpm.yield.gas += 1;
+                bpm.yield.gold += 1;
             }
         },
         else => {},
