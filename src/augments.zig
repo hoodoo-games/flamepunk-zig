@@ -9,36 +9,36 @@ const Texture2D = rl.Texture2D;
 const Message = state.Message;
 
 pub const augments = [_]Augment{
-    //.{
-    //    .name = "Wright to Aviation", //fka Bloodrush
-    //    .description = "Unlocks the skyport",
-    //    .properties = .{ .buildingUnlock = .{ .archetypeIdx = 4 } },
-    //    .callbacks = .{ .init = unlockBuilding },
-    //},
-    //.{
-    //    .name = "Unlock Gravity Stone",
-    //    .description = "Unlocks the Gravity Stone building.",
-    //    .properties = .{ .buildingUnlock = .{ .archetypeIdx = 5 } },
-    //    .callbacks = .{ .init = unlockBuilding },
-    //},
-    //.{
-    //    .name = "Unlock Mountainshell",
-    //    .description = "Unlocks the Mountainshell building.",
-    //    .properties = .{ .buildingUnlock = .{ .archetypeIdx = 6 } },
-    //    .callbacks = .{ .init = unlockBuilding },
-    //},
-    //.{
-    //    .name = "Insanity Potion",
-    //    .description = "Unlocks the Insanity Lab",
-    //    .properties = .{ .buildingUnlock = .{ .archetypeIdx = 7 } },
-    //    .callbacks = .{ .init = unlockBuilding },
-    //},
-    //.{
-    //    .name = "???",
-    //    .description = "Unlocks ???",
-    //    .properties = .{ .buildingUnlock = .{ .archetypeIdx = 8 } },
-    //    .callbacks = .{ .init = unlockBuilding },
-    //},
+    .{
+        .name = "Wright to Aviation", //fka Bloodrush
+        .description = "Unlocks the skyport",
+        .properties = .{ .buildingUnlock = .{ .archetypeIdx = 4 } },
+        .callbacks = .{ .init = unlockBuilding },
+    },
+    .{
+        .name = "Unlock Gravity Stone",
+        .description = "Unlocks the Gravity Stone building.",
+        .properties = .{ .buildingUnlock = .{ .archetypeIdx = 5 } },
+        .callbacks = .{ .init = unlockBuilding },
+    },
+    .{
+        .name = "Unlock Mountainshell",
+        .description = "Unlocks the Mountainshell building.",
+        .properties = .{ .buildingUnlock = .{ .archetypeIdx = 6 } },
+        .callbacks = .{ .init = unlockBuilding },
+    },
+    .{
+        .name = "Insanity Potion",
+        .description = "Unlocks the Insanity Lab",
+        .properties = .{ .buildingUnlock = .{ .archetypeIdx = 7 } },
+        .callbacks = .{ .init = unlockBuilding },
+    },
+    .{
+        .name = "???",
+        .description = "Unlocks ???",
+        .properties = .{ .buildingUnlock = .{ .archetypeIdx = 8 } },
+        .callbacks = .{ .init = unlockBuilding },
+    },
     .{
         .name = "Word on Wallstreet", //fka campfire stories
         .description = "When a building produces gold, also gain the production of adjacent buildings.",
