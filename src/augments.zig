@@ -60,11 +60,11 @@ pub const augments = [_]Augment{
         .description = "After the fiscal goal has been met, all buildings produce 50% bonus resources for the rest of the year.",
         .callbacks = .{ .multiply = overtimePolicy },
     },
-    //.{
-    //    .name = "Into Diamonds", //fka Petrified Wood
-    //    .description = "When you produce gas, also produce 50% of that amount in minerals.",
-    //    .callbacks = .{},
-    //},
+    .{
+        .name = "Extraction Training", //fka Petrified Wood
+        .description = "When you produce gas, also produce 50% of that amount in minerals.",
+        .callbacks = .{ .after = extractionTraining },
+    },
     //.{
     //    .name = "Trickledown Economics",
     //    .description = "Every time you produce 10 gold, also produce 1 gas and 1 minerals.",
@@ -146,6 +146,16 @@ fn overtimePolicy(_: *Augment, m: *Message) void {
                 bpm.yield.gas *= 1.5;
                 bpm.yield.gold *= 1.5;
             }
+        },
+        else => {},
+    }
+}
+
+fn extractionTraining(_: *Augment, m: *Message) void {
+    switch (m.*) {
+        .buildingProduced => |*bpm| {
+            if (bpm.yield.gas <= 0) return;
+            bpm.yield.minerals += bpm.yield.gas * 0.5;
         },
         else => {},
     }
