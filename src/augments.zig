@@ -15,12 +15,12 @@ pub const augments = [_]Augment{
         .properties = .{ .buildingUnlock = .{ .archetypeIdx = 4 } },
         .callbacks = .{ .init = unlockBuilding },
     },
-    .{
-        .name = "Unlock Gravity Stone",
-        .description = "Unlocks the Gravity Stone building.",
-        .properties = .{ .buildingUnlock = .{ .archetypeIdx = 5 } },
-        .callbacks = .{ .init = unlockBuilding },
-    },
+    //.{
+    //    .name = "Unlock Gravity Stone",
+    //    .description = "Unlocks the Gravity Stone building.",
+    //    .properties = .{ .buildingUnlock = .{ .archetypeIdx = 5 } },
+    //    .callbacks = .{ .init = unlockBuilding },
+    //},
     .{
         .name = "Unlock Mountainshell",
         .description = "Unlocks the Mountainshell building.",
