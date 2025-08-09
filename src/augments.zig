@@ -65,11 +65,12 @@ pub const augments = [_]Augment{
         .description = "When you produce gas, also produce 50% of that amount in minerals.",
         .callbacks = .{ .after = extractionTraining },
     },
-    //.{
-    //    .name = "Trickledown Economics",
-    //    .description = "Every time you produce 10 gold, also produce 1 gas and 1 minerals.",
-    //    .callbacks = .{},
-    //},
+    .{
+        .name = "Trickledown Economics",
+        .description = "Every time you produce 10 gold, also produce 1 gas and 1 minerals.",
+        .properties = .{ .trickledownEconomics = .{ .goldProduced = 0 } },
+        .callbacks = .{ .after = trickledownEconomics },
+    },
 
     // Augment ideas:
     // - "Bullish Market" - Halfway through each fiscal year, double your resources
@@ -161,6 +162,27 @@ fn extractionTraining(_: *Augment, m: *Message) void {
     }
 }
 
+fn trickledownEconomics(self: *Augment, m: *Message) void {
+    switch (m.*) {
+        .buildingProduced => |*bpm| {
+            switch (self.properties) {
+                .trickledownEconomics => |*tde| {
+                    tde.goldProduced += bpm.yield.gold;
+
+                    if (tde.goldProduced >= 10) {
+                        const prod = tde.goldProduced / 10;
+                        if (state.updateResources(.{ .minerals = prod, .gas = prod, .gold = 0 })) {
+                            tde.goldProduced = @mod(tde.goldProduced, 10);
+                        }
+                    }
+                },
+                else => {},
+            }
+        },
+        else => {},
+    }
+}
+
 fn unlockBuilding(self: *Augment) void {
     switch (self.properties) {
         .buildingUnlock => |v| {
@@ -190,6 +212,8 @@ pub const Augment = struct {
         archetypeIdx: usize,
     }, glassTools: struct {
         hasBroken: bool = false,
+    }, trickledownEconomics: struct {
+        goldProduced: f64,
     } };
 };
 
