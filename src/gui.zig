@@ -42,6 +42,13 @@ fn drawHUD() void {
     }
 
     drawGoldQuota();
+
+    // drawTextBox(rl.getFontDefault() catch unreachable, "Hello textbox", .{
+    //     .x = 0,
+    //     .y = 0,
+    //     .width = 400,
+    //     .height = 200,
+    // }, 30, 1, true, .white);
 }
 
 fn drawConstructionMenu() void {
@@ -232,3 +239,124 @@ fn drawAugmentCard(augmentIdx: usize, pos: Vector2) void {
         );
     }
 }
+
+// fn drawTextBox(
+//     font: rl.Font,
+//     text: [:0]const u8,
+//     rec: rl.Rectangle,
+//     fontSize: f32,
+//     spacing: f32,
+//     wordWrap: bool,
+//     tint: rl.Color,
+// ) void {
+//     const length = rl.textLength(text); // Total length in bytes of the text, scanned by codepoints in loop
+
+//     var textOffsetY: i32 = 0; // Offset between lines (on line break '\n')
+//     var textOffsetX: f32 = 0.0; // Offset X to next character to draw
+
+//     const scaleFactor: f32 = fontSize / @as(f32, @floatFromInt(font.baseSize)); // Character rectangle scaling factor
+
+//     // Word/character wrapping mechanism variables
+//     var measureMode: bool = wordWrap;
+
+//     var startLine: i32 = -1; // Index where to begin drawing (where a line begins)
+//     var endLine: i32 = -1; // Index where to stop drawing (where a line ends)
+//     var lastk: i32 = -1; // Holds last value of the character position
+
+//     var i: usize = 0;
+//     var k: i32 = 0;
+//     while (i < length) {
+//         // Get next codepoint from byte string and glyph index in font
+//         var codepointByteCount: i32 = 0;
+//         const codepoint = rl.getCodepoint(text[i.. :0], &codepointByteCount);
+//         const index: usize = @intCast(rl.getGlyphIndex(font, codepoint));
+
+//         // NOTE: Normally we exit the decoding sequence as soon as a bad byte is found (and return 0x3f)
+//         // but we need to draw all of the bad bytes using the '?' symbol moving one byte
+//         if (codepoint == 0x3f) codepointByteCount = 1;
+//         i += (@as(usize, @intCast(codepointByteCount - 1)));
+
+//         var glyphWidth: f32 = 0;
+//         if (codepoint != '\n') {
+//             glyphWidth = if (font.glyphs[index].advanceX == 0)
+//                 font.recs[index].width * scaleFactor
+//             else
+//                 @as(f32, @floatFromInt(font.glyphs[index].advanceX)) * scaleFactor;
+
+//             if (i + 1 < length) glyphWidth = glyphWidth + spacing;
+//         }
+
+//         // NOTE: When wordWrap is ON we first measure how much of the text we can draw before going outside of the rec container
+//         // We store this info in startLine and endLine, then we change states, draw the text between those two variables
+//         // and change states again and again recursively until the end of the text (or until we get outside of the container)
+//         // When wordWrap is OFF we don't need the measure state so we go to the drawing state immediately
+//         // and begin drawing on the next line before we can get outside the container
+//         if (measureMode) {
+//             // TODO: There are multiple types of spaces in UNICODE, maybe it's a good idea to add support for more
+//             // Ref: http://jkorpela.fi/chars/spaces.html
+//             if ((codepoint == ' ') or (codepoint == '\t') or (codepoint == '\n')) endLine = @intCast(i);
+
+//             if ((textOffsetX + glyphWidth) > rec.width) {
+//                 endLine = if (endLine < 1) @intCast(i) else endLine;
+//                 if (i == endLine) endLine -= codepointByteCount;
+//                 if ((startLine + codepointByteCount) == endLine) endLine = (@as(i32, @intCast(i)) - codepointByteCount);
+
+//                 measureMode = !measureMode;
+//             } else if ((i + 1) == length) {
+//                 endLine = @intCast(i);
+//                 measureMode = !measureMode;
+//             } else if (codepoint == '\n') measureMode = !measureMode;
+
+//             if (!measureMode) {
+//                 textOffsetX = 0;
+//                 i = @intCast(startLine);
+//                 glyphWidth = 0;
+
+//                 // Save character position when we switch states
+//                 const tmp = lastk;
+//                 lastk = k - 1;
+//                 k = tmp;
+//             }
+//         } else {
+//             if (codepoint == '\n') {
+//                 if (!wordWrap) {
+//                     textOffsetY += @intFromFloat(@as(f32, @floatFromInt(font.baseSize + @divFloor(font.baseSize, 2))) * scaleFactor);
+//                     textOffsetX = 0;
+//                 }
+//             } else {
+//                 if (!wordWrap and ((textOffsetX + glyphWidth) > rec.width)) {
+//                     textOffsetY += @intFromFloat(@as(f32, @floatFromInt(font.baseSize + @divFloor(font.baseSize, 2))) * scaleFactor);
+//                     textOffsetX = 0;
+//                 }
+
+//                 // When text overflows rectangle height limit, just stop drawing
+//                 if ((textOffsetY + font.baseSize * scaleFactor) > rec.height) break;
+
+//                 // Draw current character glyph
+//                 if ((codepoint != ' ') and (codepoint != '\t')) {
+//                     rl.drawTextCodepoint(
+//                         font,
+//                         codepoint,
+//                         (Vector2){ rec.x + textOffsetX, rec.y + textOffsetY },
+//                         fontSize,
+//                         tint,
+//                     );
+//                 }
+//             }
+
+//             if (wordWrap and (i == endLine)) {
+//                 textOffsetY += (font.baseSize + font.baseSize / 2) * scaleFactor;
+//                 textOffsetX = 0;
+//                 startLine = endLine;
+//                 endLine = -1;
+//                 glyphWidth = 0;
+//                 k = lastk;
+
+//                 measureMode = !measureMode;
+//             }
+//         }
+
+//         if ((textOffsetX != 0) || (codepoint != ' ')) textOffsetX += glyphWidth; // avoid leading spaces
+//         k += 1;
+//     }
+// }
