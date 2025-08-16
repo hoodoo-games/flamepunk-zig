@@ -12,7 +12,7 @@ pub const ascensions = [_]Ascension{
             .minerals = 60,
         },
         .numRounds = 6,
-        .roundDuration = 90,
+        .roundDuration = 2,
     },
 };
 
@@ -23,8 +23,9 @@ pub const Ascension = struct {
     numRounds: usize,
     roundDuration: f32,
 
-    pub fn goldQuota(_: *const Ascension, round: usize) f32 {
+    pub fn goldQuota(_: *const Ascension, _: usize) f32 {
         //TODO gold quota scaling function
-        return @floatFromInt(10 + std.math.pow(usize, 10, round));
+        // return @floatFromInt(10 + std.math.pow(usize, 10, round));
+        return 0;
     }
 };

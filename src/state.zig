@@ -33,6 +33,7 @@ var ascensionIndex: usize = 0;
 
 var augmentSelectOpen: bool = false;
 var roundActive: bool = false;
+var prePlacementPause: bool = true;
 var roundIdx: usize = 0;
 var elapsedRoundTime: f32 = 0;
 
@@ -148,6 +149,8 @@ pub fn openAugmentSelectMenu() void {
 fn placeBuilding(coord: Vector2, archetypeIdx: usize) void {
     if (!updateResources(getBuilding(archetypeIdx).price.negate())) return;
 
+    prePlacementPause = false;
+
     // destroy obstructing building if exists
     if (tiles[map.tileCoordToIdx(coord)].building != null) demolishBuilding(coord);
 
@@ -205,25 +208,27 @@ pub fn update() void {
     updateAim();
 
     if (isRoundActive()) {
-        updateBuildings();
+        if (!prePlacementPause) {
+            updateBuildings();
 
-        elapsedRoundTime += rl.getFrameTime();
-        if (elapsedRoundTime >= getAscension().roundDuration) {
-            if (resources.gold >= getGoldQuota()) {
-                roundIdx += 1;
+            elapsedRoundTime += rl.getFrameTime();
+            if (elapsedRoundTime >= getAscension().roundDuration) {
+                if (resources.gold >= getGoldQuota()) {
+                    roundIdx += 1;
 
-                if (roundIdx >= getAscension().numRounds) {
-                    endGame(true);
+                    if (roundIdx >= getAscension().numRounds) {
+                        endGame(true);
+                    } else {
+                        // start next round
+                        handleMessage(.{ .roundEnd = {} });
+                        openAugmentSelectMenu();
+                        elapsedRoundTime = 0;
+                        resources.gold = 0;
+                        handleMessage(.{ .roundStart = {} });
+                    }
                 } else {
-                    // start next round
-                    handleMessage(.{ .roundEnd = {} });
-                    openAugmentSelectMenu();
-                    elapsedRoundTime = 0;
-                    resources.gold = 0;
-                    handleMessage(.{ .roundStart = {} });
+                    endGame(false);
                 }
-            } else {
-                endGame(false);
             }
         }
 
